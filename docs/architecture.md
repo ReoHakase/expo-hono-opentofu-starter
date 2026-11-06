@@ -74,6 +74,10 @@ Jestのtransform設定にはBunのisolated配置も許可している。React Na
 
 ## インフラと配信の所有者
 
+2026年11月7日の[Expoアプリ共有方法比較](chatgpt-conversation://6aee4c98-58bc-83ee-939a-d32402ae2c83)に基づき、今後のネイティブ機能をWeb互換性で制約しないため、Expo Web対応は見送る（[Issue #18](https://github.com/ReoHakase/expo-hono-opentofu-starter/issues/18)）。共有用の `preview` はAndroid APKとiOS Simulator用アプリに統一する。開発クライアントを無効にし、Metroなしで起動するが、SNS機能には別途到達可能なAPIを必要とする。iPhone実機への配布はSimulator版で代替できない。
+
+EAS BuildはCLIまたは `native-builds.yml` の手動実行で起動する。pushやPRではビルドしない。既存のdevelopment／productionプロファイルとOTA配信経路を維持し、Lucideへのアイコン統一はWeb対応と切り離して[Issue #20](https://github.com/ReoHakase/expo-hono-opentofu-starter/issues/20)で追跡する。
+
 OpenTofuはAPI有効化、Artifact Registry、Cloud SQL、DB、DBユーザー、サービスアカウント、IAM、WIF、Secret Managerの器、Cloud Runサービスとmigration Jobを管理する。
 
 DBパスワードはOpenTofuのephemeral変数とGoogle providerのwrite-only引数を使用する。Secret Managerの**値**は手動投入し、コードやstateへ複製しない。bootstrap用GCS bucketはversioning、public access prevention、削除防止付き。

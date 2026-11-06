@@ -37,7 +37,7 @@ tflint --chdir=infra/bootstrap --config="$PWD/.tflint.hcl"
 
 ## Maestro
 
-`apps/mobile/.maestro/showcase.yaml` が未ログイン時のホーム・プロフィール・設定フローを検証する。開発サーバーを必要としないpreview/simulatorビルドで実行する。
+`apps/mobile/.maestro/showcase.yaml` が未ログイン時のホーム・プロフィール・設定フローを検証する。開発サーバーを必要としないpreviewビルドで実行する。
 
 ```sh
 maestro test apps/mobile/.maestro/showcase.yaml
@@ -46,6 +46,15 @@ maestro test apps/mobile/.maestro/showcase.yaml
 クラウド実行例は `docs/examples/native-e2e.yml`。2026-11-05の実アカウントでの検証では、EASのMaestroジョブに有料プランが必要だったため、未使用のサンプルとして置いている。契約後に `apps/mobile/.eas/workflows/native-e2e.yml` へコピーし、`eas workflow:validate`を通してから実行する。iOS E2Eのために各開発者のMacを必須にしない。
 
 JestはExpo UIのネイティブ境界をmockするため、SwiftUI/Composeの実描画を保証しない。bundle生成、型検査、mock付きテストと、実機での確認は区別して記録する。
+
+## 2026-11-07の共有用ビルド設定の検証
+
+- `bun run check` が成功。`eas config --profile preview --platform ios` / `android` で、両OSの `developmentClient: false`、iOSの `simulator: true`、Androidの `buildType: apk` を確認した。
+- `eas workflow:validate .eas/workflows/native-builds.yml --non-interactive` が成功。ネイティブbuild workflowは `workflow_dispatch` のみで、GitHub Actionsから自動起動する参照はない。
+- 未使用の `docs/examples/native-e2e.yml` もpreview参照に更新した。EAS CLI 27.5.0でのサーバー検証は、従来どおりMaestroジョブに有料プランが必要として拒否された。契約後の再検証が必要である。
+- EASのpreview環境にPlain text／Sensitive変数は未登録。共有ビルドのSNS機能には `EXPO_PUBLIC_API_URL` と到達可能なAPIの準備が必要。
+
+この変更ではクラウドビルド・OTA公開・ストア提出を起動していない。変更後のAPK／Simulatorアプリの生成とインストール・起動は未確認である。
 
 ## 2026-11-06の認証付きSNSの検証
 
