@@ -47,6 +47,18 @@ maestro test apps/mobile/.maestro/showcase.yaml
 
 JestはExpo UIのネイティブ境界をmockするため、SwiftUI/Composeの実描画を保証しない。bundle生成、型検査、mock付きテストと、実機での確認は区別して記録する。
 
+## 2026-11-07のDevice Hub開発環境の検証
+
+- `bun run check`、Expo Doctor 20/20、iOS／Android bundle生成が成功。新規テストはHTTPS originの検証と、AndroidのCA設定がdebugだけに適用されることを確認する。既存のworktree identityテストでは別checkout・branch変更・symlinkの分離を検証する。
+- Androidの `expo prebuild --platform android --no-install` が成功。生成されたdebug manifestとXMLを確認し、main manifestへユーザーCA設定が入らないことを確認した。Node 24でのExpo config読込も成功した。
+- 実Composeの5サービスが127.0.0.1だけへ公開され、PortlessのHTTPSルートと各サービスの公開originが一致することを確認した。API `/ready` とMetro `/status` が成功。アプリenvの上書き、DB削除、業務API・スキーマ変更は行っていない。
+- 起動済みPostgreSQLで認証統合テスト3 tests／58 assertionsが成功。`test:integration` に `--no-deps` を付け、通常Compose設定でEmulateを再作成して端末用URLやポートを戻してしまう副作用を防いだ。
+- EASの `development-simulator` で `developmentClient: true` と `simulator: true` を確認。手動のnative-builds workflowのサーバー検証が成功した。EAS BuildやOTA公開は起動していない。
+- macOSのiPhone 17 Pro Simulator／iOS 26.5／Expo Go 58.0.7で、Hub 0.21.0の画面転送・タップ・キーボード入力・スクロールを確認。Portless CAをSimulatorへ登録し、HTTPSで実APIとseed画像・タイムラインを表示した。いいねの2→1→2、投稿入力と送信、入力状態を保つFast Refreshを確認した。一時的な文言変更は復元済み。Google／Apple Emulateのアカウント選択からアプリへ復帰し、同じユーザーのセッションが再作成されることも確認した。メールリンクはアプリから送信し、Emulate APIで取得したリンクを同じSimulatorで開いて、送信先のテストアカウントでログインできることを確認した。
+- 当初のHTTP構成ではBetter AuthのExpo認可proxyが `Invalid authorizationURL` を返した。利用者の選択によりHTTPSの.localhostへ統一し、認証や証明書の検証を無効化する回避策は追加していない。
+
+このMacには現在のアプリのDevelopment Buildと利用可能なAndroid system imageがないため、Development Build自体の起動、AndroidのCA・hosts・ADB転送とネイティブ操作は未確認。Ubuntu・Windows／WSL2でも未実行である。Expo Goでの確認はDevelopment Buildの保証に代えない。iPhone実機のHub転送、実Google／Apple、実メール配送、OS関連付けを使うPasskeyは対象外。
+
 ## 2026-11-07の共有用ビルド設定の検証
 
 - `bun run check` が成功。`eas config --profile preview --platform ios` / `android` で、両OSの `developmentClient: false`、iOSの `simulator: true`、Androidの `buildType: apk` を確認した。

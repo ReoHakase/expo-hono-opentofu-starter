@@ -8,8 +8,8 @@ on:
     inputs:
       ios_profile:
         type: choice
-        description: Preview targets Simulator; development needs Apple device signing.
-        options: [preview, development]
+        description: Preview and development-simulator target Simulator; development needs Apple signing.
+        options: [preview, development-simulator, development]
         default: preview
         required: true
       android_profile:

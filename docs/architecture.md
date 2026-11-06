@@ -57,6 +57,8 @@ Compose project名でDB、ネットワーク、依存関係・認証設定のvol
 
 Expoの接続モードとQRは標準CLIを使う。実機ではMetroを `compose.go.yaml` のExpo Goトンネル構成で起動し、APIは別のHTTPSトンネルまたはCloud Runへ接続する。認証URLは明示のトンネルURLを優先し、空の場合だけ開発用Compose originを使う。本番にはこの補完を適用しない。
 
+Simulator／Emulatorの日常開発はDevelopment BuildとホストのExpo Device Hub 0.21.0を使う。`dev:devices` はPortlessの名前付きHTTPS URLを読み、Git管理外の `.env.devices` とCompose overrideで端末とホストの公開originを統一する。当初のHTTPループバック案は、Better Auth Expoの認可proxyがHTTP認可URLを拒否したため採用しない。OAuthのissuerとcallbackはHTTPS、token交換・DB・メール送信は既存の内部経路とする。各仮想端末にPortlessの公開CAを登録し、Androidでは生成した名前を専用AVDのhostsに追加する。AndroidのCA信頼はdebug source setの `.localhost` に限定し、releaseには含めない。ADBは端末ごとに共有proxyだけを転送するため、他worktreeの利用中には解除しない。独自proxyや常駐DNS・監視処理は追加しない。
+
 設定とSecureStoreはインストール済みアプリ単位であり、worktree別アプリIDは生成しない。端末で複数worktreeを切り替える場合、APIのログイン状態を確認する。各APIのDBとsecretは独立する。
 
 GCPのリソースprefixは正式名称と環境名から決める。サービスアカウントとWIF poolだけは、22文字を超えるprefixを先頭13文字とSHA-256先頭8文字（ハイフン区切り）へ短縮する。既存stateの切替・リソース置換は自動実行しない。

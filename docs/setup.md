@@ -1,8 +1,68 @@
 # 開発環境と外部サービスの設定
 
-2026年11月6日。GitHubは [ReoHakase/expo-hono-opentofu-starter](https://github.com/ReoHakase/expo-hono-opentofu-starter)、Expoは [@reohakase/expo-hono-opentofu-starter](https://expo.dev/accounts/reohakase/projects/expo-hono-opentofu-starter)。Expo project IDは `1f2d3048-c03b-4d7e-8220-7385b3875389`。
+2026年11月7日。GitHubは [ReoHakase/expo-hono-opentofu-starter](https://github.com/ReoHakase/expo-hono-opentofu-starter)、Expoは [@reohakase/expo-hono-opentofu-starter](https://expo.dev/accounts/reohakase/projects/expo-hono-opentofu-starter)。Expo project IDは `1f2d3048-c03b-4d7e-8220-7385b3875389`。
 
 Google CloudのAPIキーはローカルSNS・認証開発に不要。Vercel EmulateでGoogle／Apple OAuthとメールを試せる。[認証とseed](auth.md)を参照。クラウドの初期構築にはログイン済みのGoogleアカウントと課金を有効化したプロジェクト、CIにはWorkload Identity Federationを使う。長期のサービスアカウントJSONキーは作らない。
+
+## ホストOSの準備
+
+Metro・API・DB・EmulateはCompose内、Expo Device Hubと仮想端末はホストで動かす。日常開発はDevelopment BuildとFast Refreshを使う。Device Hubは開発ツールのWeb画面であり、アプリをExpo Webへ移植するものではない。
+
+| ホスト  | 仮想端末                        | ComposeとDevice Hubの実行場所    |
+| ------- | ------------------------------- | -------------------------------- |
+| macOS   | iOS Simulator・Android Emulator | どちらもMacのターミナル          |
+| Ubuntu  | Android Emulator                | どちらもUbuntuのターミナル       |
+| Windows | Android Emulator                | ComposeはWSL2、HubとADBはWindows |
+
+共通でGit、Node.js（`.node-version` の版）、Portless 0.16.0、Docker Compose v2を用意する。ホストのBun 1.4.4は短縮コマンド用で、必須ではない。Device Hubは `npx --yes expo-device-hub@0.21.0 --host 127.0.0.1` で起動し、リポジトリやコンテナへ依存を追加しない。初回はnpmパッケージのダウンロードにインターネット接続が必要。
+
+### macOS
+
+1. Docker DesktopとXcodeをインストールして一度起動する。XcodeのSettingsからCommand Line ToolsとiOS Simulator runtimeを選ぶ。ライセンス・追加コンポーネントの初回設定を完了し、`xcodebuild -version` と `xcrun simctl list devices available` が成功することを確認する。
+2. Android Studioの初回セットアップを完了し、SDK ManagerでAndroid SDK Platform-Tools、Android Emulator、Android SDK Command-line Toolsを入れる。
+3. Device ManagerでAndroid API 36以上の専用AVDを作る。hosts編集のためroot可能なAOSP／Google APIs imageを選び、root不可のGoogle Play imageは使わない。Apple Siliconはarm64、Intel Macはx86_64のsystem imageを使う。
+4. SDK Locationを確認してシェルのPATHを設定する。標準配置の場合は以下を使う。
+
+```sh
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+adb version
+emulator -list-avds
+```
+
+### Ubuntu
+
+Docker公式のUbuntu向け手順でDocker EngineとCompose pluginを導入し、`docker info` と `docker compose version` を確認する。Android StudioとSDK／AVDはmacOSの手順と同じで、x86_64ホストにはx86_64のsystem imageを選ぶ。
+
+```sh
+sudo apt-get update
+sudo apt-get install qemu-kvm
+sudo usermod -aG kvm "$USER"
+# グループ変更後はログアウトしてログインし直す
+export ANDROID_HOME="$HOME/Android/Sdk"
+export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+emulator -accel-check
+adb version
+emulator -list-avds
+```
+
+SDK Locationが異なる場合はAndroid Studioの表示値を使う。`/dev/kvm` のアクセス権とBIOS／UEFIの仮想化支援を確認する。iOS SimulatorはUbuntuでは動かない。
+
+### WindowsとWSL2
+
+Docker DesktopのWSL2 backendと対象Ubuntuディストリビューションのintegrationを有効にする。リポジトリはWSLのLinuxファイルシステムへcloneし、Git・Node・Portless・Compose操作はWSLで行う。`/mnt/c` 上での開発はファイル変更検知とI/Oの問題を避けるため使用しない。
+
+Android Studio、SDK、AVD、Node.jsとDevice HubはWindows側へ用意する。PowerShellで以下を実行する。SDKはAndroid Studioに表示された場所を優先する。
+
+```powershell
+$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+$env:Path = "$env:ANDROID_HOME\platform-tools;$env:ANDROID_HOME\emulator;$env:Path"
+adb version
+emulator -list-avds
+npx --yes expo-device-hub@0.21.0 --host 127.0.0.1
+```
+
+Device HubとADBをWSL内から起動してWindowsのSDKと混在させない。後述の `dev:devices` がWSLで表示する `adb reverse` の行をWindowsのPowerShellへコピーする。WSL側のPortless公開CA（`ca.pem`）と生成した `.env.devices.hosts` もWindows側の作業フォルダへコピーする。秘密鍵の `ca-key.pem` はコピーしない。WindowsからWSLの公開ポートへはlocalhost転送を使う。AVD起動に必要なWindowsのハイパーバイザー設定はAndroid Studioの案内に従う。
 
 ## 1. cloneとworktreeの準備
 
@@ -70,6 +130,8 @@ worktreeをエディタで開いて **Reopen in Container** を実行する。`i
 bun install --frozen-lockfile
 bun run setup
 bun run dev          # API・Metro（依存DBとmigrationを含む）
+bun run dev:devices  # 仮想端末向けのHTTPS設定でAPI・Metroを起動
+bun run devices      # ホストでDevice Hubを起動
 bun run dev:api      # APIとDB
 bun run dev:mobile   # Metroのみ。DB不要
 bun run dev:go       # API・DBとExpo Go用トンネル付きMetro
@@ -83,6 +145,118 @@ bun run services:down
 旧来のホスト実行モードと `compose.host.yaml`、独自のポート解決・プロセス監視スクリプトは廃止した。同じcheckoutのCompose project名・DB volume名は維持する。旧ホストプロセスが残っている場合は、そのターミナルでCtrl+Cしてから切り替える。
 
 ## 2. iPhone / Android から開く
+
+### SimulatorとEmulatorで日常開発する
+
+最初にDevelopment Buildを作り、仮想端末へインストールする。クラウドビルドは次のCLIまたはExpo dashboardから手動実行する。push・PRからは起動しない。
+
+```sh
+cd apps/mobile
+bunx eas build --platform ios --profile development-simulator
+bunx eas build --platform android --profile development
+```
+
+iOSのdevelopment-simulatorはApple Developer Program不要。成果物を展開した `.app` を起動中のSimulatorへドラッグするか、`xcrun simctl install booted /absolute/path/App.app` でインストールする。Androidは `adb devices -l` で対象を選び、`adb -s SERIAL install /absolute/path/app.apk` を実行する。`SERIAL` は実際の端末IDへ置き換える。共有用previewはMetroへ接続する開発クライアントではないため、この用途には使用しない。
+
+worktreeルートへ戻り、ホストで次を実行する。
+
+```sh
+bun run dev:devices
+bun run db:seed
+# 別のホストターミナル
+bun run devices
+```
+
+Bunをホストへ入れない場合、起動は `node scripts/devices.ts`、seedは `portless compose exec api bun run --cwd apps/api db:seed`、Hubは前述の固定版npxコマンドを使う。
+
+`dev:devices` は既存のPortless Composeでサービスを起動し、Portlessの名前付きHTTPS URLを読み取る。Git管理外の `.env.devices` を生成し、`compose.devices.yaml` でアプリのAPI URLと認証の公開URLを揃える。アプリの `.env` は上書きしない。このモードの環境変数はアプリenvの保存値より優先される。内部のtoken／JWKS取得とDB・メール送信は引き続きComposeの内部アドレスを使う。
+
+**HTTPのPortlessでは起動を完了できない。** Better AuthのExpo認可proxyはHTTPSの認可URLを要求する。HTTPへ書き換えるだけではGoogle／Apple Emulateのログインに失敗するため、先にホストのHTTPS proxyを準備する。既存のHTTP proxyを使っている別プロジェクトがあれば勝手に停止せず、その管理者と切替を調整する。`PORTLESS_STATE_DIR` を設定済みのHTTPS proxyを使う場合は、起動・停止・CA取得を含む全コマンドに同じ値を引き継ぐ。
+
+| 接続                                      | URL                                     |
+| ----------------------------------------- | --------------------------------------- |
+| ホスト・Simulator・Emulator               | `https://<service>.<project>.localhost` |
+| APIからOAuthのtoken／JWKS取得・メール送信 | Compose内部のgoogle・apple・mail        |
+| Device Hubのブラウザ画面                  | Hubが表示するホストのループバックURL    |
+
+### iOS SimulatorのCAと名前解決
+
+Portlessの公開CAを、使うSimulatorごとに一度登録する。ホストの信頼設定とは別で、新規Simulator作成・初期化後は再登録する。
+
+```sh
+xcrun simctl list devices available
+xcrun simctl keychain SIMULATOR_UDID add-root-cert "${PORTLESS_STATE_DIR:-$HOME/.portless}/ca.pem"
+portless hosts sync
+```
+
+`SIMULATOR_UDID` は対象IDへ置き換える。Portlessのhosts同期はmacOSの名前解決を揃えるための公式機能。SimulatorはホストのHTTPS proxyへ直接接続する。CA秘密鍵の持ち出しや証明書検証の無効化は不要。補助的にiOSのExpo Goで試す場合は `exps://<Metroのホスト>` を開く。端末用overrideはそのworktreeの `exps://` 復帰URLだけも許可し、通常のDevelopment Buildでは既存のアプリschemeを使う。
+
+### Android EmulatorのCAと名前解決
+
+AndroidではユーザーCAの追加だけで全アプリが信頼するわけではない。本リポジトリのconfig pluginはAndroidの **debug source setだけ** にNetwork Security Configurationを生成し、`.localhost` とそのサブドメインへの通信だけでユーザーCAを認める。通常のsystem CAは維持する。preview／productionはreleaseビルドなのでこの設定を含まない。変更後のDevelopment Buildを一度作り直す。AndroidのExpo Goにはこのアプリ設定を追加できないため、確認には使わない。
+
+ホストで公開CAをコピーし、対象AVDへ送る。WindowsではWSLからコピーした `ca.pem` を送る。
+
+```sh
+adb devices -l
+adb -s SERIAL push "${PORTLESS_STATE_DIR:-$HOME/.portless}/ca.pem" /sdcard/Download/portless-ca.crt
+```
+
+端末の設定で「セキュリティとプライバシー」→証明書のインストール→CA証明書を開き、Downloadの `portless-ca.crt` を登録する。Androidの版により項目名は異なる。アプリは登録されたCAで通常のTLS検証を行う。
+
+Emulatorはホストのhostsファイルを引き継がないため、専用AVDのhostsにも生成した名前を登録する。これは実機やGoogle Play imageをroot化する手順ではない。対象の開発用AVDだけを一旦終了し、ホスト側で起動する。
+
+```sh
+emulator -avd AVD_NAME -writable-system -no-snapshot
+# 別ターミナル
+adb -s SERIAL root
+adb -s SERIAL remount
+adb -s SERIAL pull /system/etc/hosts .env.devices.android-hosts
+```
+
+`remount` がverity解除と再起動を要求した場合は、その専用AVDだけで `adb -s SERIAL disable-verity`、`adb -s SERIAL reboot` を行い、起動後にroot／remountをやり直す。root不可のimageならAOSP／Google APIsのAVDへ切り替える。
+
+取得した `.env.devices.android-hosts` をエディタで開き、生成された `.env.devices.hosts` のコメントと1行を追記する。同じprojectの既存行があれば置き換え、元のlocalhost・IPv6・他worktreeの行は残す。Windowsでは同じファイルをWindows側で編集し、UTF-8・BOMなしで保存する。
+
+```sh
+adb -s SERIAL push .env.devices.android-hosts /system/etc/hosts
+# dev:devicesが表示したproxyポートを使う。標準は443
+adb -s SERIAL reverse tcp:443 tcp:443
+```
+
+すべてのサービス名が端末の127.0.0.1へ解決され、ADBがホストのPortlessへ転送する。Compose各サービスの動的ポートを端末へ転送する必要はない。Windowsでは上記のADB操作をPowerShellで行う。`-writable-system` のsystem変更はEmulator終了時に失われるため、次回起動時にもhostsを確認・再設定する。CAはAVDのユーザーデータを初期化しない限り保持される。
+
+公式仕様は [EmulatorのDNS](https://developer.android.com/studio/run/emulator-networking-dns)、[書込み可能なsystem](https://developer.android.com/studio/run/emulator-commandline)、[AndroidのCA設定](https://developer.android.com/privacy-and-security/security-config) を参照する。
+
+### 起動とFast Refresh
+
+Hubが表示するURLをホストのブラウザで開き、準備したSimulator／Emulatorを選ぶ。Development BuildのEnter URLへ `dev:devices` が表示したMetroの **HTTPS URL** を入力する。ブラウザや端末に証明書エラーが出る場合は先にCA・名前解決を直す。
+
+ソースを保存するとCompose内のMetroが変更を検知し、端末にFast Refreshで反映する。ネイティブ依存・config plugin・権限・URL scheme等を変更したときは手動でDevelopment Buildを作り直す。Device Hubは表示・操作を担当し、Fast Refreshの通信は端末とMetroが直接行う。
+
+Google／Apple Emulateの公開URL、issuer、API callbackも同じHTTPS経路になる。メールの確認先は表示されたmail URLを使う。実Google／Appleの認証情報は不要。ネイティブPasskeyには実ドメインのOS関連付けが別途必要で、ローカルCAの登録だけでは保証しない。iPhone実機のHub画面転送も現行版では対象外。
+
+### 再接続と停止
+
+端末を再起動した場合は対象serialへ `adb reverse` を再設定する。新しいworktreeでは `dev:devices` を実行し、その名前をAndroidのhostsへ追加する。`.env.devices` とhosts生成ファイルを他worktreeの設定として流用しない。同じSimulator／Emulatorには同じアプリIDが入るため、worktree切替時はAPIのログイン状態も確認する。
+
+HubはCtrl+C、Composeは `bun run services:down` で自worktreeだけを停止する。DB volumeは保持する。**HTTPS proxyの転送は同じ端末の全worktreeで共有する**ため、他worktreeがその端末を使っている間は解除しない。最後に `adb -s SERIAL reverse --remove tcp:443`（カスタムproxyなら表示されたポート）でその転送だけを解除する。`--remove-all` は使わない。hostsも不要になった自projectの行だけを削除する。共有proxyやCAをworktreeごとに停止・削除しない。
+
+通常構成へ戻るときは `bun run dev` を使う。`.env.devices` は明示した端末用overrideだけが読み込む。`bun run test:integration` は起動済みDBを使い、依存サービスを通常構成で作り直さない。
+
+### 接続のトラブルシュート
+
+| 状態                       | 確認すること                                                                                                                                                          |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hubに端末が出ない          | ホストの `xcrun simctl list devices available` または `adb devices -l`／`emulator -list-avds` が成功するか。SDK LocationとHubの起動OSを確認する                       |
+| ADBがunauthorized／offline | 端末のデバッグ承認と再接続を確認する。複数端末では必ず `-s SERIAL` を付ける                                                                                           |
+| 名前を解決できない         | iOSは `portless hosts sync`、Androidは端末の `/system/etc/hosts` を確認する。ホストのhostsだけではAndroidに反映されない                                               |
+| 証明書エラー               | 接続中のPortlessとCAが同じか、対象Simulator／AVDに登録したか確認する。Androidは変更後のdebug buildを使う。検証を無効化しない                                          |
+| Metroに接続できない        | HTTPS URLの `/status` と、対象serialの `adb reverse --list` を確認する。古い転送先や端末選択を見直す                                                                  |
+| APIやOAuthに接続できない   | APIの `/ready`、google／appleのhostsとHTTPS経路、issuerとcallbackを確認する。HTTP認可URLはBetter Authが拒否する                                                       |
+| ログイン後に戻らない       | Development BuildとURL scheme、APIとEmulateが同じ起動設定か確認する。古い認証画面を閉じて再試行する                                                                   |
+| 保存しても反映されない     | 端末のFast Refresh設定、Composeのmount先と編集worktreeを確認する。WSLではLinux側のファイルを編集する。単なる再読込と区別する                                          |
+| Windowsだけ接続できない    | PowerShellの `Test-NetConnection 127.0.0.1 -Port 443` でWSLのproxyへ到達できるか確認する。Docker Desktopのintegration、WSLのlocalhost転送、ファイアウォールを確認する |
 
 ### まずExpo Goでショーケース
 
@@ -225,7 +399,7 @@ Expoのログイン、EAS project、GitHubリポジトリの接続は完了済�
 bunx eas workflow:run .eas/workflows/native-builds.yml
 ```
 
-Development Buildが必要なら `ios_profile=development` / `android_profile=development` を選ぶ。iOS実機用にはApple署名が必要。リポジトリにはpush・PR・定期実行からEAS Buildを起動する経路を設けない。Expo GitHub連携の自動buildトリガーも追加しない。PRコメントのpreview配信は既存ビルド向けのOTAであり、ネイティブビルドを作らない。
+Development Buildが必要なら、iOS Simulatorは `ios_profile=development-simulator`、Androidは `android_profile=development` を選ぶ。iOS実機用の `ios_profile=development` にはApple署名が必要。リポジトリにはpush・PR・定期実行からEAS Buildを起動する経路を設けない。Expo GitHub連携の自動buildトリガーも追加しない。PRコメントのpreview配信は既存ビルド向けのOTAであり、ネイティブビルドを作らない。
 
 本番は従来どおり、APIデプロイ成功後だけ `production-update.yml` を呼び出す。このOTAと手動native build workflowはExpo Workflows側で実行する。ビルドだけなら前述の `eas build --platform all --profile preview` から直接起動でき、workflowを経由する必要はない。
 
