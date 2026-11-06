@@ -7,13 +7,13 @@ jobs:
     environment: preview
     params:
       platform: ios
-      profile: simulator
+      profile: preview
   android_build:
     type: build
     environment: preview
     params:
       platform: android
-      profile: simulator
+      profile: preview
   ios_test:
     needs: [ios_build]
     type: maestro

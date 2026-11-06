@@ -137,6 +137,19 @@ iPhone実機への内部配布にはApple Developer Program、端末登録、署
 
 このリポジトリはEASに接続済みで、`build:configure` / `update:configure`も実行済み。設定はfingerprint runtime policy、development/preview/production channel。フォーク時は `eas init`、`eas build:configure`、`eas update:configure` で自分のプロジェクトへ再接続する。
 
+### 共有用previewビルド
+
+`preview` は `developmentClient: false` の単体アプリで、Androidは `.apk`、iOSはSimulator用 `.app` を生成する。MetroやExpo Goなしで起動できる。以前の `simulator` プロファイルは `preview` に統合した。
+
+```sh
+cd apps/mobile
+bunx eas build --platform all --profile preview
+```
+
+このコマンドは手動で両OSのEAS Buildを起動し、ビルド利用枠を消費する。片方だけなら `--platform android` または `--platform ios` を指定する。ビルド結果ページのダウンロードリンクを共有し、AndroidはAPKを端末へインストールする。iOSはアーカイブを展開した `.app` をMacのXcode Simulatorへドラッグしてインストールする。Simulator版にApple Developer Programは不要だが、iPhone実機へはインストールできない。
+
+SNS機能には到達可能なAPIが必要。ビルド前にEASの `preview` 環境の `EXPO_PUBLIC_API_URL` を共有staging APIのHTTPS URLへ設定する。ローカルの `.localhost` や開発用Emulateは共有相手の端末から利用できない。実プロバイダの認証・Passkeyには別途API側の設定が必要。API未設定のビルドでは接続案内が表示される。
+
 ## 3. GitHubとExpoの手動設定
 
 ### GitHub Actions
@@ -206,7 +219,15 @@ Expoのログイン、EAS project、GitHubリポジトリの接続は完了済�
 2. ExpoのEnvironment Variablesで `EXPO_PUBLIC_API_URL` をdevelopment/preview/productionそれぞれに設定する。公開URLなのでvisibilityはplain text。previewは共有staging API、productionは本番API。ローカル `.env` はクラウドへアップロードしない。未設定なら接続案内が表示され、SNS機能は利用できない。
 3. GitHubのpreview Environmentへtokenを登録し、PRコメントまたはActionsから配信する。
 
-`apps/mobile/.eas/workflows/native-builds.yml` は手動でiOS SimulatorとAndroid preview APKを作る。Development Buildが必要なら `ios_profile=development` / `android_profile=development` を選ぶ。iOS実機用にはApple署名が必要。本番は従来どおり、APIデプロイ成功後だけ `production-update.yml` を呼び出す。両方ともExpo Workflows側の実行となる。
+`apps/mobile/.eas/workflows/native-builds.yml` は `workflow_dispatch` のみで、既定の `ios_profile=preview` / `android_profile=preview` によりiOS SimulatorとAndroid APKを作る。Expo dashboardから手動実行するか、`apps/mobile` で次を実行する。
+
+```sh
+bunx eas workflow:run .eas/workflows/native-builds.yml
+```
+
+Development Buildが必要なら `ios_profile=development` / `android_profile=development` を選ぶ。iOS実機用にはApple署名が必要。リポジトリにはpush・PR・定期実行からEAS Buildを起動する経路を設けない。Expo GitHub連携の自動buildトリガーも追加しない。PRコメントのpreview配信は既存ビルド向けのOTAであり、ネイティブビルドを作らない。
+
+本番は従来どおり、APIデプロイ成功後だけ `production-update.yml` を呼び出す。このOTAと手動native build workflowはExpo Workflows側で実行する。ビルドだけなら前述の `eas build --platform all --profile preview` から直接起動でき、workflowを経由する必要はない。
 
 Apple/Googleストアの契約・署名は別途必要で、TestFlight/ストア提出は自動実行しない。初期設定のビルド・端末確認記録は [検証](testing.md) を参照する。
 

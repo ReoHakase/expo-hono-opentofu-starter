@@ -8,9 +8,9 @@ on:
     inputs:
       ios_profile:
         type: choice
-        description: Simulator needs no Apple Developer membership.
-        options: [simulator, development]
-        default: simulator
+        description: Preview targets Simulator; development needs Apple device signing.
+        options: [preview, development]
+        default: preview
         required: true
       android_profile:
         type: choice
