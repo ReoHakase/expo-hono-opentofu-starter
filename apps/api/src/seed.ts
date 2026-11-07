@@ -1,6 +1,6 @@
 import { connectDatabase } from './db/client';
 import { like, post, user } from './db/schema';
-import { readEnv } from './platform/env';
+import { readEnv } from './env';
 
 const env = readEnv();
 if (env.NODE_ENV !== 'development' || !env.AUTH_EMULATE) {

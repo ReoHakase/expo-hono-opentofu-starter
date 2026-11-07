@@ -1,22 +1,15 @@
 import { createEmulator } from 'emulate';
 
-if (process.env.NODE_ENV === 'production') {
-  throw new Error('Emulate cannot run in production');
-}
-const service = process.env.EMULATE_SERVICE;
-if (service !== 'google' && service !== 'apple' && service !== 'resend') {
-  throw new Error('Set EMULATE_SERVICE to google, apple or resend');
-}
-const configuredApi = process.env.BETTER_AUTH_URL?.trim();
-const apiOrigin =
-  (configuredApi === '' ? undefined : configuredApi) ??
-  process.env.DEV_API_ORIGIN ??
-  'http://localhost:8080';
-const baseUrl = process.env.EMULATE_PUBLIC_URL ?? `http://localhost:${process.env.PORT ?? '4002'}`;
+import { readEnv } from './env';
+
+const env = readEnv();
+const service = env.EMULATE_SERVICE;
+const apiOrigin = env.BETTER_AUTH_URL;
+const baseUrl = env.EMULATE_PUBLIC_URL ?? `http://localhost:${env.PORT}`;
 const emulator = await createEmulator({
   service,
-  port: Number(process.env.PORT ?? '4002'),
-  hostname: process.env.EMULATE_HOST ?? '127.0.0.1',
+  port: env.PORT,
+  hostname: env.EMULATE_HOST,
   baseUrl,
   seed: {
     [service]: {

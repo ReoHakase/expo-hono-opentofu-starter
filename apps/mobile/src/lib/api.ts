@@ -8,8 +8,9 @@ import * as SecureStore from 'expo-secure-store';
 import { hc } from 'hono/client';
 import { Platform } from 'react-native';
 
-const configuredUrl = process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/$/, '');
-export const apiUrl = configuredUrl === '' ? null : (configuredUrl ?? null);
+import { readEnv } from '@/env';
+
+export const apiUrl = readEnv().EXPO_PUBLIC_API_URL ?? null;
 export const authClient = createAuthClient({
   baseURL: apiUrl ?? 'http://localhost:8080',
   plugins: [

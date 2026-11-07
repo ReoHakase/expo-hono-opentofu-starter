@@ -1,11 +1,9 @@
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 
+import { readDatabaseEnv } from '../env';
 import { connectDatabase } from './client';
 
-const url = process.env.DATABASE_URL;
-if (!url) {
-  throw new Error('DATABASE_URL is required');
-}
+const { DATABASE_URL: url } = readDatabaseEnv();
 const { db, pool } = connectDatabase(url);
 try {
   await migrate(db, { migrationsFolder: './drizzle' });

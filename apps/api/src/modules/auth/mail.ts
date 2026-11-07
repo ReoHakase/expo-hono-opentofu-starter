@@ -1,4 +1,4 @@
-import type { Environment } from '../../platform/env';
+import type { Environment } from '../../env';
 
 export async function sendLoginEmail(env: Environment, email: string, url: string) {
   const verification = new URL(url);

@@ -2,8 +2,8 @@ import { afterAll, describe, expect, test } from 'bun:test';
 
 import { createApp } from './app';
 import { connectDatabase } from './db/client';
+import { readEnv } from './env';
 import { createAuth } from './modules/auth';
-import { readEnv } from './platform/env';
 
 const { db, pool } = connectDatabase('postgresql://unused:unused@127.0.0.1:1/unused');
 const env = readEnv({

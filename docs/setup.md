@@ -85,6 +85,14 @@ sh scripts/worktree-init.sh
 
 POSIXの初期化処理が実パス由来のID・Compose名・mount先をルートのGit管理外 `.env` へ保存する。branch変更やdetached HEADでもIDは変わらない。checkoutとGit共通ディレクトリをホストと同じ絶対パスでmountするため、linked worktreeでもGitが動く。`node_modules`、ルートの生成 `.env`、DB volumeは他worktreeからコピーしない。
 
+### 環境変数の読み込み
+
+アプリ内の環境変数は各 `apps/*/src/env.ts` 経由で読み込む。envalidが必須値・URL・ポート等を検証し、不正な設定では値を含めず項目名を通知する。変数を追加するときは対応する `src/env.ts`、`.env.example`、Turborepoのenv宣言を更新する。
+
+API起動・seedはDATABASE_URL、32文字以上のBETTER_AUTH_SECRET、BETTER_AUTH_URLが必要で、本番のauth URLはHTTPSにする。DB migrationはDATABASE_URLだけで実行できる。Google／Apple等の任意項目の空値は未設定として扱う。AUTH_EMULATEはenvalidのboolean形式で読み込む（通常は `true` / `false`）。
+
+mobileの `EXPO_PUBLIC_API_URL` と `EXPO_PUBLIC_PASSKEY_RP_ID` は任意。API URLは絶対URL、RP IDはスキームを含めないホスト名を設定する。API URLが空ならComposeのDEV_API_ORIGINをapp configで補完し、どちらもなければAPI未接続の案内を表示する。`EXPO_PUBLIC_*` はbundleへ埋め込まれるためsecretを設定しない。
+
 ### 起動・接続・停止
 
 ホストで共有HTTPS/443 proxyを一度起動する。tablecast-poc等の既存のproxyは再利用する。初回のローカルCA登録や管理者認証はホストの対話ターミナルで行う。既存proxyがHTTPの場合は、そのホストで利用中のworktreeを止め、`portless proxy stop` の後に以下のHTTPS proxyを起動する。この切替はホスト全体で一度行う。

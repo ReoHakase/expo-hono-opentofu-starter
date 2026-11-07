@@ -44,6 +44,7 @@
         "@starter/shared": "workspace:*",
         "better-auth": "1.7.17",
         "drizzle-orm": "1.0.0-rc.5",
+        "envalid": "9.0.0",
         "hono": "4.13.16",
         "jose": "6.2.3",
         "pg": "8.23.1",
@@ -62,6 +63,7 @@
       "version": "0.1.0",
       "dependencies": {
         "emulate": "0.13.0",
+        "envalid": "9.0.0",
       },
       "devDependencies": {
         "tsx": "4.23.15",
@@ -82,6 +84,7 @@
         "better-auth": "^1.7.17",
         "class-variance-authority": "0.7.1",
         "clsx": "2.1.1",
+        "envalid": "9.0.0",
         "expo": "~58.0.23",
         "expo-apple-authentication": "58.0.2",
         "expo-constants": "~58.0.15",
@@ -1545,6 +1548,8 @@
     "env-paths": ["env-paths@2.2.0", "", {}, "sha512-6u0VYSCo/OW6IoD5WCLLy9JUGARbamfSavcNXry/eu8aHVFei6CD3Sw+VGX5alea1i9pgPHW0mbu6Xj0uBh7gA=="],
 
     "env-string": ["env-string@1.0.1", "", {}, "sha512-/DhCJDf5DSFK32joQiWRpWrT0h7p3hVQfMKxiBb7Nt8C8IF8BYyPtclDnuGGLOoj16d/8udKeiE7JbkotDmorQ=="],
+
+    "envalid": ["envalid@9.0.0", "", {}, "sha512-yGeeseY35RhYaDpBsNgL/fEaBqCsnCsRGCOmWHGLR+gaLE22Yk8fYbwkarIQxV2i4rj0F86EIFd32Yi0fqIZWQ=="],
 
     "envinfo": ["envinfo@7.11.0", "", { "bin": { "envinfo": "dist/cli.js" } }, "sha512-G9/6xF1FPbIw0TtalAMaVPpiq2aDEuKLXM314jPVAO9r2fo2a4BLqMNkmRS7O/xPPZ+COAhGIz3ETvHEV3eUcg=="],
 

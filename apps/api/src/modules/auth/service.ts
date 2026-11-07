@@ -7,7 +7,7 @@ import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { magicLink } from 'better-auth/plugins';
 
 import type { Database } from '../../db/client';
-import type { Environment } from '../../platform/env';
+import type { Environment } from '../../env';
 
 import * as schema from '../../db/schema';
 import { emulatedProviders } from './emulated-providers';

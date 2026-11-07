@@ -2,7 +2,7 @@ import { genericOAuth } from 'better-auth/plugins';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { z } from 'zod';
 
-import type { Environment } from '../../platform/env';
+import type { Environment } from '../../env';
 
 const identity = z.object({
   sub: z.string(),
