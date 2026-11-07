@@ -4,6 +4,31 @@ import { ESLint } from 'eslint';
 const eslint = new ESLint({ cwd: import.meta.dirname + '/..' });
 const cases = [
   {
+    file: 'apps/api/src/index.ts',
+    code: 'const url = process.env.DATABASE_URL;',
+    valid: false,
+  },
+  {
+    file: 'apps/api/src/env.ts',
+    code: 'const url = process.env.DATABASE_URL;',
+    valid: true,
+  },
+  {
+    file: 'apps/api/src/modules/auth/service.ts',
+    code: "import type { Environment } from '../../env';",
+    valid: true,
+  },
+  {
+    file: 'apps/api/src/db/migrate.ts',
+    code: "import { readDatabaseEnv } from '../env';",
+    valid: true,
+  },
+  {
+    file: 'apps/mobile/src/lib/api.ts',
+    code: "import { readEnv } from '@/env';",
+    valid: true,
+  },
+  {
     file: 'apps/mobile/src/lib/api.ts',
     code: "import type { AppType } from '@starter/api/contract';",
     valid: true,
@@ -62,7 +87,8 @@ for (const example of cases) {
       .filter(
         (message) =>
           (message.ruleId ?? '').startsWith('boundaries/') ||
-          message.ruleId === 'no-restricted-imports',
+          message.ruleId === 'no-restricted-imports' ||
+          message.ruleId === 'no-restricted-syntax',
       );
     expect(errors.length === 0).toBe(example.valid);
   });

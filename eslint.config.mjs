@@ -56,6 +56,8 @@ export default [
         { type: 'emulate', pattern: 'apps/emulate/src' },
       ],
       'boundaries/files': [
+        { pattern: 'apps/api/src/env.ts', category: 'api-env' },
+        { pattern: 'apps/mobile/src/env.ts', category: 'mobile-env' },
         { pattern: '**/*.test.{ts,tsx}', category: 'test' },
         { pattern: 'apps/mobile/global.css', category: 'mobile-style' },
         { pattern: '**/index.ts', category: 'public' },
@@ -70,6 +72,14 @@ export default [
         {
           default: 'disallow',
           policies: [
+            {
+              from: { element: { type: ['api-module', 'api-db', 'api-platform'] } },
+              allow: { to: { file: { categories: 'api-env' } } },
+            },
+            {
+              from: { element: { type: 'mobile-lib' } },
+              allow: { to: { file: { categories: 'mobile-env' } } },
+            },
             {
               from: { element: { type: 'api-root' } },
               allow: {
@@ -127,6 +137,19 @@ export default [
               disallow: { to: { file: { categories: 'test' } } },
             },
           ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['apps/**/*.{ts,tsx}'],
+    ignores: ['apps/*/src/env.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "MemberExpression[object.name='process'][property.name='env']",
+          message: 'Read and configure environment variables through apps/*/src/env.ts.',
         },
       ],
     },

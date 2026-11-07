@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { readEnv } from './env';
+import { readDatabaseEnv, readEnv } from './env';
 
 const base = {
   NODE_ENV: 'development',
@@ -12,6 +12,13 @@ const base = {
 };
 
 describe('API environment', () => {
+  test('database-only commands require no server or authentication configuration', () => {
+    expect(readDatabaseEnv({ DATABASE_URL: base.DATABASE_URL }).DATABASE_URL).toBe(
+      base.DATABASE_URL,
+    );
+    expect(() => readDatabaseEnv({ DATABASE_URL: '' })).toThrow('DATABASE_URL');
+  });
+
   test('uses Compose origins when the development auth URL is empty', () => {
     const env = readEnv({ ...base, BETTER_AUTH_URL: '' });
     expect(env.BETTER_AUTH_URL).toBe(base.DEV_API_ORIGIN);

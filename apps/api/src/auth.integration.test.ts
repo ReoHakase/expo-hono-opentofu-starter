@@ -6,14 +6,11 @@ import { z } from 'zod';
 import { createApp } from './app';
 import { connectDatabase } from './db/client';
 import { user } from './db/schema';
+import { readDatabaseEnv, readEnv } from './env';
 import { createAuth } from './modules/auth';
 import { softwareAuthenticator } from './passkey-fixture';
-import { readEnv } from './platform/env';
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  throw new Error('Set DATABASE_URL to a migrated test database');
-}
+const { DATABASE_URL: databaseUrl } = readDatabaseEnv();
 const { db, pool } = connectDatabase(databaseUrl);
 const unique = crypto.randomUUID();
 const email = `auth-${unique}@example.com`;

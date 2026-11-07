@@ -25,6 +25,14 @@ flowchart LR
 
 Drizzle 1.0 RCは[公式の移行手順](https://orm.drizzle.team/docs/upgrade-v1)に従って採用する。DB接続は `drizzle({ client: pool })` を使い、認証のschemaはBetter Authのadapterへ渡す。Kitで廃止された `strict` 設定は削除した。既存migrationは `drizzle-kit up` でSQLとsnapshotを同じディレクトリへ移し、snapshotをversion 9へ変換した。SQLの内容・ハッシュと適用順序は保持し、テーブルの作り直しは行わない。
 
+## 環境変数
+
+API・mobile・Emulateは各 `apps/*/src/env.ts` で[envalid](https://github.com/af/envalid)を使って環境変数を検証する。`process.env` の参照・書き込みはこの入口に限定し、アプリごとの型はvalidatorから推論する。HTTP入力と共有モデルは引き続きZodが担当する。
+
+APIはsecretの32文字以上、productionのHTTPS、ローカルEmulate接続先の制限を維持する。migrationと認証統合テストのDB準備は `readDatabaseEnv()` でDATABASE_URLだけを要求する。エラーは項目名だけを含め、値をログへ出さず例外として停止する。Emulateはproductionでは起動しない。
+
+mobileは公開API URLとpasskey RP IDだけを検証する。Expoの静的置換のため、`process.env.EXPO_PUBLIC_*` を `src/env.ts` 内で直接参照する。API URLの空値は未設定として扱い、末尾のスラッシュを除去する。app configは同じ入口の `loadBuildEnv()` でComposeの開発originを補ってからMetroへ渡す。公開URL・RP IDは未設定でも起動でき、API接続とネイティブpasskeyだけが無効になる。secretやサーバー用envをmobileへ渡さない。
+
 ## UIと端末内データ
 
 日本語SNSへ用途を変更した。ホーム、マイページ、設定をNative Tabs／Stackで構成する。X型のFlatList、投稿、反応はReusables Text／Button + Uniwind Free 1.13.2／Tailwind CSS 4.3.4、設定とOS操作は共通 `@expo/ui`。SF SymbolsとMaterialの両ソースを指定する。
@@ -37,7 +45,7 @@ AndroidのMaterial色は参照時に解決されるため、`useColors` で外�
 
 ## APIと認証の境界
 
-`tablecast-poc/apps/api` のcomposition rootとモジュール公開入口を参考に、`app.ts`、`platform/env.ts`、`db`、`modules/auth`、`modules/social` へ分離した。organization／店舗・Cloudflare固有処理は持ち込まない。公開RPCは `contract.ts` の型だけ。
+`tablecast-poc/apps/api` のcomposition rootとモジュール公開入口を参考に、`app.ts`、`env.ts`、`db`、`modules/auth`、`modules/social` へ分離した。organization／店舗・Cloudflare固有処理は持ち込まない。公開RPCは `contract.ts` の型だけ。
 
 Better Authが認証し、Honoの `requireSession` と所有者条件が投稿・削除・いいねを認可する。入力はZod、いいねは複合主キーで冪等。公開フィードは著者ID・表示名・画像だけを返し、メールを公開しない。マジックリンクは10分・単回利用・ハッシュ保存、WebAuthnは署名／challenge／originを検証する。共通rate limitはDB保存。
 

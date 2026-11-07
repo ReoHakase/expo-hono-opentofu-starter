@@ -2,8 +2,8 @@ import { serve } from '@hono/node-server';
 
 import { createApp } from './app';
 import { connectDatabase } from './db/client';
+import { readEnv } from './env';
 import { createAuth } from './modules/auth';
-import { readEnv } from './platform/env';
 
 const env = readEnv();
 const { db, pool } = connectDatabase(env.DATABASE_URL);

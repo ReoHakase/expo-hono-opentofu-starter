@@ -6,8 +6,8 @@ import { secureHeaders } from 'hono/secure-headers';
 import { fileURLToPath } from 'node:url';
 
 import type { Database } from './db/client';
+import type { Environment } from './env';
 import type { Auth } from './modules/auth';
-import type { Environment } from './platform/env';
 
 import { authCapabilities, authRoutes } from './modules/auth';
 import { socialRoutes } from './modules/social';

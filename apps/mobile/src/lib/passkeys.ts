@@ -1,13 +1,16 @@
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform } from 'react-native';
 
+import { readEnv } from '@/env';
 import { authClient } from '@/lib/api';
+
+const env = readEnv();
 
 export const passkeysAvailable =
   Platform.OS === 'web'
     ? typeof PublicKeyCredential !== 'undefined'
     : Constants.executionEnvironment !== ExecutionEnvironment.StoreClient &&
-      Boolean(process.env.EXPO_PUBLIC_PASSKEY_RP_ID);
+      Boolean(env.EXPO_PUBLIC_PASSKEY_RP_ID);
 
 export async function addPasskey() {
   if (Platform.OS === 'web') {
