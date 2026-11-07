@@ -1,36 +1,48 @@
-# 検証
+# テスト戦略
 
-## 2026-11-07のworktree標準命名の検証
+スターターの既定構成で、クリーンなcheckoutから開発環境が立ち上がり、認証・永続化・モバイルの接続が動くことを、代表ケースで守る。SNSはその接続を示すサンプルとして扱う。分担と層の選び方はTableCastの方針を参考にしている。[TableCastの保証の分担](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/4a75151f058bce31a4800c0d831679cd05c17b4c/docs/testing.md#L39-L62)
 
-- Issue #29で独自ハッシュとComposeの明示nameを削除し、`expo-hono-opentofu-starter-29-portless-defaults` と一時的な `expo-hono-opentofu-starter-29-parallel-check` の2 worktreeを起動した。既存の旧ハッシュ名projectとHTTPS proxyは維持した。
-- `bun run check` が成功。初期化・端末スクリプトのBunテスト14件でmount用パスだけの生成、旧project設定の除去、symlink、アプリenvの保持、解決済みproject名での端末設定生成と1回のbuild・起動を確認した。認証統合テストも3件／58 assertionsが成功した。
-- 通常・Expo Go・端末・editor／tunnel profileのCompose設定を検証した。Compose標準のproject名指定が開発originにも反映されることを確認した。親パスに単引用符・空白・ドル記号を含む別の一時ディレクトリでは、実コンテナからcheckoutとGit共通ディレクトリを参照できた。
-- 2 worktreeのAPI・Metro・Google／Apple／メールのHTTPS URLと、全10個のloopback公開ポートが独立した。PostgreSQLはホスト非公開。各projectの8個のvolumeとDB system identifierが異なり、同じメールアドレスで認証してもDB内のユーザーIDが異なった。
-- 実HTTPS経由のGoogle／Apple Emulate認証で、新しいAPI callbackから同じworktreeのMetroへ復帰し、`/api/me` が認証済みとなった。session CookieはSecure・HttpOnlyでDomain未指定。同じCookie jarで他worktreeのAPIを呼ぶと401となり、CORSは対応するMetro originだけを許可した。Cookie・tokenは記録していない。
-- 一時projectだけを `portless compose --profile '*' down` で停止し、残る新projectと既存projectのAPI応答を確認した。8個のvolumeが保持され、再起動後のユーザーIDとDB system identifierも維持された。旧volumeの移行・削除や共有proxyの停止は行っていない。
+## 保証の分担
 
-今回の変更後のiOS／Androidネイティブ接続・再ログイン、実機、Ubuntu／Windows、Dev Containerのエディタ操作は未確認。CLI・Compose・実HTTPS APIの確認であり、端末操作の保証には代えない。製品UI・ネイティブ依存・DBスキーマは変更せず、EAS Build・OTA・本番配信も起動していない。
+| 層               | 実際に動かすもの                                                                  | 差し替える境界                                         | 観測する結果                                                                        |
+| ---------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| 静的検査         | Oxfmt、Oxlint、ESLint、TypeScript、Fallow                                         | —                                                      | 型、依存方向、禁止import、未処理Promise、未使用コード                               |
+| 単体             | Bunで本番のschema、純粋関数、環境設定                                             | 必要な入力・時刻・乱数だけ                             | 境界値、変換結果、設定エラー                                                        |
+| HTTP契約         | BunでHonoの `app.request()` とルート・middleware                                  | DBを必要としないケースを選ぶ                           | status、header、validation、認証なしの拒否                                          |
+| API・DB統合      | Bunで本番のHono、Better Auth、Drizzle、migration済みPostgreSQL                    | 外部IdP・メールはEmulate、WebAuthnはソフトウェア認証器 | ログインと失効、他者の書き込み拒否、DBに残る状態、制約とトランザクション            |
+| モバイル機能統合 | Jest、jest-expo、Testing Libraryで本番コンポーネントと既存のQueryClient・provider | API応答とネイティブモジュール                          | スケルトンからの遷移、空・失敗・再試行、入力保持、操作後の画面                      |
+| ネイティブ       | iOS／AndroidのSimulator・Emulatorまたは実機と、必要に応じて隔離したAPI            | ローカル検証では外部IdP等をEmulate                     | OSの戻る操作、シート、キーボード、文字拡大、ダークモード、deep link・認証からの復帰 |
+| 実行基盤         | 実Git・ファイルを使うBunテスト、Docker Compose、Nodeコンテナ、OpenTofu・TFLint    | 一時checkout、検証用設定・DB                           | worktreeの分離、設定解決、migration、起動と `/health`、IaCの妥当性                  |
 
-## 自動検査
+## ケースの選び方
 
-```sh
-bun run check
-bun run db:migrate
-bun run test:integration
-bun run doctor
-bun run export:mobile
-```
+1. 壊れ得る契約と、利用者や呼び出し元が観測できる結果を決める。同じ保証が既存の検査にあれば使う。
+2. 結果を検出できる最も低い層で、公開入口を通る代表ケースを選ぶ。入力検証はHTTP、実DBの制約や認可後の書き込みはAPI統合、取得から表示・再試行までの遷移はJestが担当する。
+3. 実OS、認証リダイレクト、ビルド済みアプリの配線でしか起きない失敗は、端末で代表経路を一巡して確認する。繰り返し実行する安定した手順には既存のMaestroを使う。
+4. 上位の重複を除く前に、下位で代替した保証が通ることと、上位にしかない接続の保証が残ることを確認する。
 
-変更が壊れたときに検出できる最も小さい層でテストする。
+標準ライブラリの内部、設定値の写し、呼び出し回数だけを固定する試験は増やさない。サンプルの画面・操作・OSバージョンの全組み合わせは展開しない。別の認可条件やデータ保全の保証を追加した場合は、該当する層にケースを置く。
 
-| 変更箇所                         | 確認する場所                                                                                                                |
-| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| スキーマ、環境設定、HTTP入力検証 | Bunの単体テスト。APIのHTTP境界は `app.request()` で呼び出す。                                                               |
-| 認可、SQLの制約と同時更新        | PostgreSQLを使うBunの統合テスト。APIの `*.integration.test.ts` は統合コマンドで探索し、通常の `bun run test` から除外する。 |
-| 画面の状態、失敗からの復旧       | JestとTesting Library。ユーザーが見る状態と操作の結果を確認する。                                                           |
-| OSの描画・戻る操作・認証連携     | iOSとAndroidでの操作確認。手順を安定して自動化できるフローにはMaestroを使う。                                               |
+- 画面の状態は公開された操作と表示結果で確認する。stateの置き場所や子コンポーネントの構造をassertしない。主要コンテンツは初回取得中に対応する形のスケルトンを表示し、取得済みデータの再取得中は内容を保つ。
+- OS・バージョン分岐を追加した場合は、実際に異なる動作の両側を代表環境で確認する。業務ロジックの分岐は下位層で検証する。
+- SQLの変更は、代表的なデータ量で往復数・SQL時間・HTTPの所要時間を区別して見る。性能改善を報告するときは対象経路と条件を示す。整合性・認可の保証は実DBの結果で確認する。
+- fixtureはケースに必要なデータだけを作る。統合テストは開発・CI用DBに対して実行し、一意なメールアドレスで作ったテストユーザーだけを片付ける。非同期処理は応答や画面の状態を待つ。
 
-CIではPostgreSQLの接続先をmigrationと統合テストのステップにだけ渡す。統合テストは専用の一意なメールアドレスを使い、終了時にそのユーザーだけを削除する。開発/CI用DBに対して実行する。
+## 実行方法
+
+| 変更                         | ローカルで確認する範囲                                                                                                                                      |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 文書、指示、PRテンプレート   | 対象の整形・リンク・記述と実装の整合                                                                                                                        |
+| shared・HTTP・開発スクリプト | 関連するBunテスト、lint・型。workspace全体へ波及する変更は `bun run check`                                                                                  |
+| 認証、永続化、migration      | APIの関連テストと、隔離した開発環境で `bun run db:migrate` → `bun run test:integration`                                                                     |
+| モバイル                     | `bun run --cwd apps/mobile test` と型。依存やbundleに影響するときは `bun run doctor` と `bun run export:mobile`。OS固有の振る舞いを変えたときは端末でも確認 |
+| Compose・コンテナ・IaC       | 変更した構成を解決し、実行時に影響する変更は隔離環境で起動を確認。IaCは下記の検査                                                                           |
+
+`bun run check` は整形・lint・型・DB不要のBun/Jest・Fallowを実行する。テストは対象コードの近くに置き、`*.test.ts`・`*.test.tsx` をrunnerに自動検出させる。実PostgreSQLが必要なAPIテストは `*.integration.test.ts` に置き、`test:integration` で実行する。
+
+通常の[GitHub Actions CI](../.github/workflows/ci.yml)はPR、mainへのpush、手動実行で動く。 `quality` は生成型・`check`・実PostgreSQL・Expo Doctor・両OSのbundleを、`infrastructure` はOpenTofuとTFLintを、`container` はCompose設定とNodeコンテナの起動を確認する。CIのDB接続先はmigrationと統合テストのステップにだけ渡す。端末・EAS・配信の確認は、変更に必要な範囲で別に実施する。
+
+PRには、保証と担当する層、確認したコミット、実行コマンドまたはビルド・OS、結果と未確認範囲を記録する。ローカル、CI、端末、配信の結果は分けて扱う。
 
 ```sh
 tofu fmt -check -recursive infra
@@ -44,6 +56,8 @@ tflint --chdir=infra/bootstrap --config="$PWD/.tflint.hcl"
 ```
 
 ## iOS / Android 共通の実機チェック
+
+SNSサンプルの確認例。変更した機能と影響するOSの動作を選ぶ。
 
 1. `bun run db:seed` 後、ホームで複数ユーザーの画像と投稿を確認する。再実行して件数が増えず、利用者の投稿が残ることも確認する。
 2. 投稿者のアイコン→プロフィール→戻る。ユーザー情報・編集と、そのユーザーの投稿一覧が明確に分かれていることを確認する。
@@ -88,6 +102,17 @@ maestro test apps/mobile/.maestro/showcase.yaml
 クラウド実行例は `docs/examples/native-e2e.yml`。2026-11-05の実アカウントでの検証では、EASのMaestroジョブに有料プランが必要だったため、未使用のサンプルとして置いている。契約後に `apps/mobile/.eas/workflows/native-e2e.yml` へコピーし、`eas workflow:validate`を通してから実行する。iOS E2Eのために各開発者のMacを必須にしない。
 
 JestはExpo UIのネイティブ境界をmockするため、SwiftUI/Composeの実描画を保証しない。bundle生成、型検査、mock付きテストと、実機での確認は区別して記録する。
+
+## 2026-11-07のworktree標準命名の検証
+
+- Issue #29で独自ハッシュとComposeの明示nameを削除し、`expo-hono-opentofu-starter-29-portless-defaults` と一時的な `expo-hono-opentofu-starter-29-parallel-check` の2 worktreeを起動した。既存の旧ハッシュ名projectとHTTPS proxyは維持した。
+- `bun run check` が成功。初期化・端末スクリプトのBunテスト14件でmount用パスだけの生成、旧project設定の除去、symlink、アプリenvの保持、解決済みproject名での端末設定生成と1回のbuild・起動を確認した。認証統合テストも3件／58 assertionsが成功した。
+- 通常・Expo Go・端末・editor／tunnel profileのCompose設定を検証した。Compose標準のproject名指定が開発originにも反映されることを確認した。親パスに単引用符・空白・ドル記号を含む別の一時ディレクトリでは、実コンテナからcheckoutとGit共通ディレクトリを参照できた。
+- 2 worktreeのAPI・Metro・Google／Apple／メールのHTTPS URLと、全10個のloopback公開ポートが独立した。PostgreSQLはホスト非公開。各projectの8個のvolumeとDB system identifierが異なり、同じメールアドレスで認証してもDB内のユーザーIDが異なった。
+- 実HTTPS経由のGoogle／Apple Emulate認証で、新しいAPI callbackから同じworktreeのMetroへ復帰し、`/api/me` が認証済みとなった。session CookieはSecure・HttpOnlyでDomain未指定。同じCookie jarで他worktreeのAPIを呼ぶと401となり、CORSは対応するMetro originだけを許可した。Cookie・tokenは記録していない。
+- 一時projectだけを `portless compose --profile '*' down` で停止し、残る新projectと既存projectのAPI応答を確認した。8個のvolumeが保持され、再起動後のユーザーIDとDB system identifierも維持された。旧volumeの移行・削除や共有proxyの停止は行っていない。
+
+今回の変更後のiOS／Androidネイティブ接続・再ログイン、実機、Ubuntu／Windows、Dev Containerのエディタ操作は未確認。CLI・Compose・実HTTPS APIの確認であり、端末操作の保証には代えない。製品UI・ネイティブ依存・DBスキーマは変更せず、EAS Build・OTA・本番配信も起動していない。
 
 ## 2026-11-07のDevice Hub開発環境の検証
 

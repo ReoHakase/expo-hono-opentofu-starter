@@ -15,8 +15,7 @@ import { NativeHost } from '@/components/native-host';
 import { Screen } from '@/components/screen';
 import { Skeleton } from '@/components/skeleton';
 import { Text } from '@/components/ui/text';
-import { apiUrl, authClient } from '@/lib/api';
-import { profileOptions } from '@/lib/profile';
+import { apiUrl, authClient, publicApi } from '@/lib/api';
 import { useColors } from '@/theme/colors';
 import { avatarSize } from '@/theme/metrics';
 
@@ -47,7 +46,20 @@ export function Profile({ id }: { id?: string }) {
     isPending,
     refetch: refetchSession,
   } = authClient.useSession();
-  const profile = useQuery(profileOptions(id));
+  const profile = useQuery({
+    queryKey: ['user', id],
+    enabled: Boolean(id && apiUrl),
+    queryFn: async ({ signal }) => {
+      const response = await publicApi.api.users[':id'].$get(
+        { param: { id: id ?? '' } },
+        { init: { signal } },
+      );
+      if (response.status !== 200) {
+        throw new Error('プロフィールを読み込めませんでした。');
+      }
+      return await response.json();
+    },
+  });
   if (id && !apiUrl) {
     return <Feedback fullScreen message="接続先が未設定です。" />;
   }

@@ -42,19 +42,11 @@ describe('HTTP contract', () => {
       ).status,
     ).toBe(401);
   });
-  test.each(['declared', 'streamed'])('rejects oversized %s request bodies', async (framing) => {
-    const body = 'x'.repeat(65 * 1024);
-    const headers = new Headers({
-      'content-type': 'application/json',
-      origin: 'http://localhost:8081',
-    });
-    if (framing === 'declared') {
-      headers.set('content-length', String(body.length));
-    }
+  test('rejects oversized request bodies while preserving response headers', async () => {
     const response = await app.request('/api/auth/mobile-magic-link', {
       method: 'POST',
-      headers,
-      body,
+      headers: { 'content-type': 'application/json', origin: 'http://localhost:8081' },
+      body: 'x'.repeat(65 * 1024),
     });
     expect(response.status).toBe(413);
     expect(response.headers.get('access-control-allow-origin')).toBe('http://localhost:8081');

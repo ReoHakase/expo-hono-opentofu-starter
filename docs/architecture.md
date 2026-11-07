@@ -53,17 +53,19 @@ AndroidのMaterial色は参照時に解決されるため、`useColors` で外�
 
 Better Authが認証し、Honoの `requireSession` と所有者条件が投稿・削除・いいねを認可する。入力はZod、いいねは複合主キーで冪等。公開フィードは著者ID・表示名・画像だけを返し、メールを公開しない。マジックリンクは10分・単回利用・ハッシュ保存、WebAuthnは署名／challenge／originを検証する。共通rate limitはDB保存。
 
-socialモジュールの公開入口で投稿とプロフィールのルーターを合成する。共通のリクエスト本文上限は64 KiBとし、プロフィール更新だけ認証後に画像用の上限を適用する。壊れたJSONや上限超過はHonoの400・413を返し、予期しないエラーの詳細は外部に返さない。いいね追加は投稿の存在確認と冪等な書き込みを一つのSQL文で行い、書き込み中の投稿削除との競合を防ぐ。
+socialモジュールの公開入口で投稿とプロフィールのルーターを合成する。共通のリクエスト本文上限は64 KiBとし、プロフィール更新だけ認証後に画像用の上限を適用する。壊れたJSONや上限超過はHonoの400・413を返し、予期しないエラーの詳細は外部に返さない。
 
 プロフィール更新は認証済みの本人だけが行える。端末が写真を選択・縮小し、APIが最大256 KiBのJPEGを検証して512px正方形に再エンコードする。メタデータを落とした画像1枚をPostgreSQLの `avatar` テーブルに保存し、表示名と画像URLを同じトランザクションで更新する。ローカルでも追加のストレージ設定は要らない。フィードとプロフィールには画像URLだけを返す。既存のOAuth・seed画像URLは、利用者が写真を変更または削除するまで使い続ける。保存後はセッションと該当ユーザーのキャッシュを更新し、他の投稿を再取得しない。
-
-アバターの条件付き取得では対象バージョンの存在を確認する。ETagが一致する場合は画像本体をDBから転送せず304を返す。置換・削除済みのバージョンは404となる。
 
 認証CookieはDomain属性を指定せず、発行元のAPIホストに限定する。MetroやEmulateとの親ドメイン共有は不要。ネイティブはBetter Auth ExpoのSecureStoreとCookie送信を使う。PasskeyのRP IDはCookie共有とは別の設定である。
 
 Google／AppleのEmulate issuer・JWKS・token endpointを使うgenericOAuthを開発時だけ登録する。実署名のID tokenを検証し、認証バイパスは設けない。本番でのEmulate起動と公開エミュレータURLを拒否する。メールはResend互換エミュレータへ送る。[設定と検証](auth.md)を参照。
 
 `eslint-plugin-boundaries` がAPI composition root→module、social→authの公開入口、module→DB/platform/shared、モバイルroutes→UI→lib、`@starter/api/contract` の `AppType` だけの型importを強制する。禁止方向・内部ファイルの直接import・未知ファイル・実行時コードからテストへの依存はエラー。sharedの外部依存はZodとテスト内の `bun:test` に限定する。`scripts/boundaries.test.ts` で許可・禁止例を実際のESLintへ通す。
+
+### SQLの設計
+
+要求を満たす最小限の往復にする。一覧は行ごとに追加取得せず、JOINや一括取得を使う。更新直後の値は可能なら `RETURNING` で受け取り、DB制約や条件付き更新で表せる判定を事前SELECTへ重ねない。認可条件と原子性を維持し、複数の書き込みが一緒に成功する必要があればトランザクションを使う。特殊なSQLを持ち込む判断は、実際の負荷と保守負担で行う。
 
 ## worktreeと開発プロセス
 
@@ -94,7 +96,7 @@ GCPのリソースprefixは正式名称と環境名から決める。サービ�
 - Oxfmt: 現在のCLIが正式対応する `.oxfmtrc.json` を使用。仕様案の `oxfmt.config.ts` に固執しない。
 - Fallow: Expo Routerとworkspaceの公開入口を検出。ネイティブautolinkingやBabelが利用する依存、トンネル用CLIだけを明示的に除外する。
 - Lefthook: stagedファイルの整形/lintとCommitlint。Conventional Commitsを要求し、Gitmoji・Issue番号は必須にしない。
-- Bun Test: 共有ロジック、HTTP契約、実DB認証。Jest + jest-expo + RNTL: モバイルの画面操作。Maestro: 必要時だけ。
+- テスト層の分担と実行条件は [テスト戦略](testing.md) に従う。
 
 Jestのtransform設定にはBunのisolated配置も許可している。React Native 0.88のFlow/ESMを正しく変換するためで、テスト対象のアプリコードを除外しない。
 

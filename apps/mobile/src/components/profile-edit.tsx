@@ -66,7 +66,17 @@ function Editor({
         ...(photo !== undefined ? { avatar: photo?.base64 ?? null } : {}),
       }),
     onSuccess: async (person) => {
-      await applyProfileToCache(client, person);
+      await Promise.all([
+        client.cancelQueries({ queryKey: ['posts'] }),
+        client.cancelQueries({ queryKey: ['user', person.id], exact: true }),
+      ]);
+      applyProfileToCache(client, person);
+      // Cancelled first loads have no cached posts to update.
+      void client.refetchQueries({
+        queryKey: ['posts'],
+        type: 'active',
+        predicate: (query) => query.state.status === 'pending',
+      });
       await refreshSession();
     },
   });

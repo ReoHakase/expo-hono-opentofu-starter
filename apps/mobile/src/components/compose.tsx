@@ -12,7 +12,6 @@ import { SocialIcon } from '@/components/social-icon';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { api, authClient } from '@/lib/api';
-import { feedKey } from '@/lib/social';
 import { useColors } from '@/theme/colors';
 
 export function Compose() {
@@ -30,7 +29,7 @@ export function Compose() {
       }
     },
     onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: feedKey });
+      await client.invalidateQueries({ queryKey: ['posts'] });
       router.back();
     },
   });

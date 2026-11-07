@@ -65,26 +65,26 @@ export function postRoutes(db: Database, auth: Auth) {
       requireSession(auth),
       zValidator('param', postParamsSchema),
       async (c) => {
-        const id = c.req.valid('param').id;
-        const userId = c.get('currentUser').id;
-        // Keep the post from being deleted between selecting it and inserting the like.
-        const target = db
-          .$with('target_post')
-          .as(db.select({ id: post.id }).from(post).where(eq(post.id, id)).for('key share'));
-        const insert = db.$with('insert_like').as(
-          db
-            .insert(like)
-            .select(
-              db
-                .select({ postId: target.id, userId: sql<string>`${userId}`.as('user_id') })
-                .from(target),
-            )
-            .onConflictDoNothing({ target: [like.postId, like.userId] }),
-        );
-        const [existing] = await db.with(target, insert).select({ id: target.id }).from(target);
-        if (!existing) {
+        const existing = await db
+          .select({ id: post.id })
+          .from(post)
+          .where(eq(post.id, c.req.valid('param').id));
+        if (!existing.length) {
           return c.json({ error: 'not_found' as const }, 404);
         }
+        // The unique key makes repeated taps and network retries idempotent.
+        await db
+          .insert(like)
+          .select(
+            db
+              .select({
+                postId: post.id,
+                userId: sql<string>`${c.get('currentUser').id}`.as('user_id'),
+              })
+              .from(post)
+              .where(eq(post.id, c.req.valid('param').id)),
+          )
+          .onConflictDoNothing();
         return c.json({ success: true });
       },
     )

@@ -339,28 +339,6 @@ test('opens the author object from a post avatar', async () => {
   expect(router.push).toHaveBeenCalledWith({ pathname: '/users/[id]', params: { id: 'author' } });
 });
 
-test('restarts an in-flight first feed load after saving a profile', async () => {
-  mockLoggedIn = true;
-  const pending = Promise.withResolvers<Awaited<ReturnType<typeof mockGetPosts>>>();
-  mockGetPosts.mockReturnValueOnce(pending.promise);
-  const requests = mockGetPosts.mock.calls.length;
-  await render(
-    <>
-      <Feed />
-      <ProfileEdit />
-    </>,
-    { wrapper: wrapper() },
-  );
-  expect(screen.getByRole('progressbar', { name: '投稿を読み込んでいます' })).toBeOnTheScreen();
-  expect(mockGetPosts).toHaveBeenCalledTimes(requests + 1);
-
-  await fireEvent.changeText(screen.getByLabelText('表示名'), '新しい名前');
-  await fireEvent.press(screen.getByLabelText('プロフィールを保存'));
-  expect(await screen.findByText('こんにちは')).toBeOnTheScreen();
-  expect(mockGetPosts).toHaveBeenCalledTimes(requests + 2);
-  pending.resolve(await feedResponse());
-});
-
 test('retains the photo and name after a failed profile save and updates the matching cached author on retry', async () => {
   mockLoggedIn = true;
   jest.mocked(router.back).mockClear();

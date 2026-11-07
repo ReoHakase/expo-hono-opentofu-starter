@@ -1,6 +1,6 @@
 import { zValidator } from '@hono/zod-validator';
 import { avatarBase64Limit, profileUpdateSchema, userParamsSchema } from '@starter/shared';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { z } from 'zod';
@@ -21,26 +21,22 @@ export function profileRoutes(db: Database, auth: Auth) {
       zValidator('param', userParamsSchema.extend({ version: z.uuid() })),
       async (c) => {
         const { id, version } = c.req.valid('param');
-        const etag = `"${version.toLowerCase()}"`;
-        const ifNoneMatch = c.req.header('if-none-match');
-        const unchanged =
-          ifNoneMatch === '*' ||
-          ifNoneMatch?.split(',').some((tag) => tag.trim().replace(/^W\//, '') === etag);
-        // Confirm the version still exists without loading the JPEG on revalidation.
         const [image] = await db
-          .select({ data: unchanged ? sql<null>`null` : avatar.data })
+          .select()
           .from(avatar)
-          .where(and(eq(avatar.userId, id), eq(avatar.version, version)));
+          .where(and(eq(avatar.userId, id), eq(avatar.version, version)))
+          .limit(1);
         if (!image) {
           return c.json({ error: 'not_found' as const }, 404);
         }
         c.header('Cache-Control', 'public, max-age=300');
-        c.header('ETag', etag);
-        if (image.data === null) {
+        c.header('ETag', `"${image.version}"`);
+        if (c.req.header('if-none-match') === `"${image.version}"`) {
           return c.body(null, 304);
         }
         return c.body(new Uint8Array(image.data), 200, {
           'Content-Type': 'image/jpeg',
+          'X-Content-Type-Options': 'nosniff',
         });
       },
     )

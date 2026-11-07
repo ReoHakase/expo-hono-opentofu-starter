@@ -76,7 +76,7 @@ Dev Containers対応エディタでは **Reopen in Container** で編集・検�
 - [開発環境・アカウント・デプロイ設定](docs/setup.md)
 - [アーキテクチャと技術選定](docs/architecture.md)
 - [認証とseed](docs/auth.md)
-- [テストと実機チェック](docs/testing.md)
+- [テスト戦略と端末チェック](docs/testing.md)
 - [エージェントの作業規約](AGENTS.md)
 - [意思決定の履歴: Expo技術選定検討](chatgpt-conversation://6aec01ec-6938-83e8-94df-24f41ae3ad55)
 - [Expoプロジェクト](https://expo.dev/accounts/reohakase/projects/expo-hono-opentofu-starter)

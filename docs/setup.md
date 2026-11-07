@@ -552,12 +552,8 @@ curl --fail "$API_ORIGIN/ready"
 
 ```sh
 codex mcp login expo
-bun run check
-bun run test:integration
-bun run doctor
-bun run export:mobile
 ```
 
 Codexはrootの `AGENTS.md` と `.agents/skills` を使う。Expo MCPは `.codex/config.toml` に設定済み。このホストでは `codex mcp login expo` のOAuthも完了済み。MCPのOAuth、Expo CLIのログイン、GitHubの接続はそれぞれ認証する。別のホストやDev Containerでは各自ログインし、認証データはリポジトリへコピーしない。
 
-詳細な実機手順とMaestroの有料プラン条件は [testing.md](testing.md)。インフラだけの `fmt` / `init -backend=false` / `validate` / TFLintはGCP認証なしで実行できる。
+変更に応じたコマンド、端末での確認手順、Maestroの利用条件は [テスト戦略](testing.md) を参照する。
