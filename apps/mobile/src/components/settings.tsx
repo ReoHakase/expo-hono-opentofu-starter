@@ -1,18 +1,9 @@
-import {
-  Button,
-  Column,
-  FieldGroup,
-  Icon,
-  ListItem,
-  Picker,
-  Row,
-  Switch,
-  Text as NativeText,
-} from '@expo/ui';
+import { Column, FieldGroup, Icon, ListItem, Picker, Switch, Text as NativeText } from '@expo/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { View } from 'react-native';
 
+import { NativeActionButton } from '@/components/native-action-button';
 import { NativeHost } from '@/components/native-host';
 import { authClient } from '@/lib/api';
 import { addPasskey, passkeysAvailable } from '@/lib/passkeys';
@@ -71,7 +62,11 @@ export function Settings() {
                 {storageError ?? action.error?.message ?? 'アカウントを確認できませんでした'}
               </NativeText>
               {session.error ? (
-                <Button
+                <NativeActionButton
+                  icon={Icon.select({
+                    ios: 'arrow.clockwise',
+                    android: import('@expo/material-symbols/refresh.xml'),
+                  })}
                   label="もう一度試す"
                   variant="outlined"
                   onPress={() => {
@@ -82,7 +77,15 @@ export function Settings() {
             </FieldGroup.Section>
           ) : null}
           <FieldGroup.Section title="表示と操作">
-            <ListItem>
+            <ListItem
+              leading=<Icon
+                name={Icon.select({
+                  ios: 'circle.lefthalf.filled',
+                  android: import('@expo/material-symbols/dark_mode.xml'),
+                })}
+                size={iconSize}
+              />
+            >
               <NativeText>外観</NativeText>
               <ListItem.Trailing>
                 <Picker
@@ -139,7 +142,11 @@ export function Settings() {
                 </ListItem>
               </>
             ) : (
-              <Button
+              <NativeActionButton
+                icon={Icon.select({
+                  ios: 'rectangle.portrait.and.arrow.right',
+                  android: import('@expo/material-symbols/login.xml'),
+                })}
                 label={session.isPending ? '確認中…' : 'ログイン・新規登録'}
                 disabled={session.isPending}
                 onPress={() => {
@@ -150,25 +157,18 @@ export function Settings() {
           </FieldGroup.Section>
           {session.data ? (
             <FieldGroup.Section>
-              <Button
+              <NativeActionButton
+                label="ログアウト"
+                icon={Icon.select({
+                  ios: 'rectangle.portrait.and.arrow.right',
+                  android: import('@expo/material-symbols/logout.xml'),
+                })}
                 variant="outlined"
                 disabled={action.isPending}
                 onPress={() => {
                   action.mutate({ kind: 'logout' });
                 }}
-              >
-                <Row spacing={10} style={{ paddingVertical: 6 }}>
-                  <Icon
-                    name={Icon.select({
-                      ios: 'rectangle.portrait.and.arrow.right',
-                      android: import('@expo/material-symbols/logout.xml'),
-                    })}
-                    size={iconSize}
-                    color={colors.destructive}
-                  />
-                  <NativeText>ログアウト</NativeText>
-                </Row>
-              </Button>
+              />
             </FieldGroup.Section>
           ) : null}
           {session.data ? (
@@ -178,7 +178,11 @@ export function Settings() {
               </FieldGroup.SectionFooter>
               {keys.isPending ? <NativeText>読み込み中…</NativeText> : null}
               {keys.error ? (
-                <Button
+                <NativeActionButton
+                  icon={Icon.select({
+                    ios: 'arrow.clockwise',
+                    android: import('@expo/material-symbols/refresh.xml'),
+                  })}
                   label="読み込めませんでした。再試行"
                   variant="outlined"
                   onPress={() => {
@@ -193,7 +197,11 @@ export function Settings() {
                 <ListItem key={key.id}>
                   <NativeText>{key.name ?? 'パスキー'}</NativeText>
                   <ListItem.Trailing>
-                    <Button
+                    <NativeActionButton
+                      icon={Icon.select({
+                        ios: 'trash',
+                        android: import('@expo/material-symbols/delete.xml'),
+                      })}
                       label="削除"
                       variant="outlined"
                       disabled={action.isPending}
@@ -204,7 +212,11 @@ export function Settings() {
                   </ListItem.Trailing>
                 </ListItem>
               ))}
-              <Button
+              <NativeActionButton
+                icon={Icon.select({
+                  ios: 'plus',
+                  android: import('@expo/material-symbols/add.xml'),
+                })}
                 label="この端末のパスキーを追加"
                 disabled={action.isPending || !passkeysAvailable}
                 onPress={() => {

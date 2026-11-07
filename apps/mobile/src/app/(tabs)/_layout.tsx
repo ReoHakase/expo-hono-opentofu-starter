@@ -8,7 +8,7 @@ export default function TabsLayout() {
   const pathname = usePathname();
   return (
     <NativeTabs>
-      {Platform.OS === 'ios' && Number(Platform.Version) >= 26 && pathname !== '/settings' ? (
+      {Platform.OS === 'ios' && Number(Platform.Version) >= 26 && pathname === '/' ? (
         <NativeTabs.BottomAccessory>
           <ComposeShortcut />
         </NativeTabs.BottomAccessory>

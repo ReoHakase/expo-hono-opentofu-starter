@@ -9,6 +9,7 @@ import { feedOptions } from '@/lib/social';
 import { Compose } from './compose';
 import { Feed } from './feed';
 import { ProfileEdit } from './profile-edit';
+import { Text } from './ui/text';
 
 jest.mock('@expo/ui', () => {
   const reactNative = jest.requireActual<typeof import('react-native')>('react-native');
@@ -160,20 +161,52 @@ function wrapper(client = queryClient()) {
   );
 }
 
-test('shows a loading state, retries a failed feed, and prompts guests to log in before liking', async () => {
+test('keeps the header across initial loading, failure, and retry without showing an empty feed', async () => {
   mockLoggedIn = false;
-  mockGetPosts.mockRejectedValueOnce(new Error('通信エラー'));
-  await render(<Feed />, { wrapper: wrapper() });
-  await waitFor(() => {
-    expect(
-      screen.getByText('投稿を読み込めませんでした。通信状況を確認してお試しください。'),
-    ).toBeOnTheScreen();
+  const failed = Promise.withResolvers<Awaited<ReturnType<typeof mockGetPosts>>>();
+  mockGetPosts.mockReturnValueOnce(failed.promise);
+  await render(<Feed header={<Text>プロフィール概要</Text>} />, { wrapper: wrapper() });
+  expect(screen.getByRole('progressbar', { name: '投稿を読み込んでいます' })).toBeOnTheScreen();
+  expect(screen.getByText('プロフィール概要')).toBeOnTheScreen();
+  expect(screen.queryByText('まだ投稿がありません')).toBeNull();
+  await act(() => {
+    failed.reject(new Error('通信エラー'));
   });
+  expect(await screen.findByText('投稿を読み込めませんでした')).toBeOnTheScreen();
+  expect(screen.getByText('プロフィール概要')).toBeOnTheScreen();
+  expect(screen.queryByText('まだ投稿がありません')).toBeNull();
   await fireEvent.press(screen.getByRole('button', { name: 'もう一度試す' }));
   expect(await screen.findByText('こんにちは')).toBeOnTheScreen();
+  expect(screen.getByText('プロフィール概要')).toBeOnTheScreen();
   await fireEvent.press(screen.getByRole('button', { name: 'いいね 2' }));
   expect(router.push).toHaveBeenCalledWith('/account');
 });
+
+test.each([
+  ['viewer', true],
+  ['another', false],
+] as const)(
+  'shows a first-post action only on the signed-in author’s own empty profile (%s)',
+  async (authorId, isOwnProfile) => {
+    mockLoggedIn = true;
+    mockGetPosts.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ items: [], nextOffset: null }),
+    });
+    await render(<Feed authorId={authorId} header={<Text>プロフィール概要</Text>} />, {
+      wrapper: wrapper(),
+    });
+    expect(await screen.findByText('まだ投稿がありません')).toBeOnTheScreen();
+    expect(screen.getByText('プロフィール概要')).toBeOnTheScreen();
+    const create = screen.queryByRole('button', { name: '最初の投稿を作成' });
+    expect(Boolean(create)).toBe(isOwnProfile);
+    jest.mocked(router.push).mockClear();
+    if (create) {
+      await fireEvent.press(create);
+    }
+    expect(jest.mocked(router.push).mock.calls).toEqual(isOwnProfile ? [['/compose']] : []);
+  },
+);
 
 test('keeps a failed post draft and allows a successful retry before dismissing', async () => {
   mockLoggedIn = true;

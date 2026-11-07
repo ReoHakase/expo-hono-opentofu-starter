@@ -46,6 +46,28 @@ tflint --chdir=infra/bootstrap --config="$PWD/.tflint.hcl"
 8. メールの単回リンク、失効・他端末の拒否、パスキー登録・ログイン・削除を確認する。Expo Goではnative passkeyが利用不可であることを表示する。
 9. API停止時のエラーと再試行。OS関連付け・実プロバイダでの認証はローカルEmulate／仮想WebAuthnの検証と別に記録する。
 
+## 投稿一覧の状態を端末で確認する
+
+iOS SimulatorとAndroid Emulatorで、`dev:devices` が表示する同じ検証worktreeのMetroへ接続する。空のDBで始め、Emulateのテストアカウントだけを使う。空状態を確認してからseedする。他の環境のDBを初期化しない。
+
+| 状態         | 再現と確認                                                                                                                                                                               |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 空           | seed前にホームとログイン後のマイページを開く。見出し、説明、アイコンが中央にあり、カードやタブから離れている。最初の投稿から編集画面へ進み、戻れる。                                     |
+| 初回読み込み | このworktreeの `docker compose pause api` を実行してアプリを開き直す。投稿カードのスケルトンを確認し、すぐに `docker compose unpause api` で復旧する。空状態へ切り替わることを確認する。 |
+| エラーと復旧 | このworktreeの `docker compose stop api` 後、アプリを開き直してエラーを待つ。`docker compose start api` で復旧して「もう一度試す」を押す。取得済みの概要や投稿は再取得中に消えない。     |
+| データあり   | `bun run db:seed` 後にホームを手動更新し、投稿が並ぶことを確認する。投稿者の画像からプロフィールを開き、投稿一覧と戻る操作を確認する。                                                   |
+
+Maestroで開いているアプリの状態を待ち、スクリーンショットを保存できる。開発ビルドの `APP_ID` は `dev.reohakase.expohonopentofustarter`。iOS Expo Goは `host.exp.Exponent` を使う。
+
+```sh
+maestro --device "$serial" test --test-output-dir .artifacts/feed-states \
+  -e APP_ID=dev.reohakase.expohonopentofustarter -e TAB=ホーム \
+  -e STATE='まだ投稿がありません' -e CAPTURE=home-empty \
+  apps/mobile/.maestro/capture-feed-state.yaml
+```
+
+`TAB`・`STATE`・`CAPTURE` を確認する画面に合わせる。初回読み込みには `STATE=loading` を指定する。スケルトンを待ち、空表示がないことを検査する。エラーの見出しは「投稿を読み込めませんでした」。保存した画像を開き、上下左右の余白、中央揃え、セーフエリア、文字拡大時の折り返しと操作への到達、ライト／ダークの見え方を確認する。PRには対象状態と実施環境が分かる画像を添付する。
+
 ## Maestro
 
 `apps/mobile/.maestro/showcase.yaml` が未ログイン時のホーム・プロフィール・設定フローを検証する。開発サーバーを必要としないpreviewビルドで実行する。
