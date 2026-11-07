@@ -79,10 +79,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Validate local Compose configurations
+        env:
+          DEVICE_API_ORIGIN: https://api.starter-ci.localhost
+          DEVICE_METRO_ORIGIN: https://metro.starter-ci.localhost
+          DEVICE_EXPO_ORIGIN: exps://metro.starter-ci.localhost
+          DEVICE_GOOGLE_ORIGIN: https://google.starter-ci.localhost
+          DEVICE_APPLE_ORIGIN: https://apple.starter-ci.localhost
+          DEVICE_MAIL_ORIGIN: https://mail.starter-ci.localhost
         run: |
           sh scripts/worktree-init.sh
           docker compose --profile editor --profile tunnel config --quiet
           docker compose -f compose.yaml -f compose.go.yaml config --quiet
+          docker compose -f compose.yaml -f compose.devices.yaml config --quiet
       - run: docker build --tag expo-hono-opentofu-starter-api --file apps/api/Dockerfile .
       - name: Run Node.js container smoke test
         run: |

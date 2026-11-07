@@ -23,7 +23,9 @@ PORTLESS_HTTPS=1 PORTLESS_PORT=443 portless compose up --build api metro
 
 依存導入・未作成の環境ファイル生成・DB migrationが自動で行われる。PortlessがAPI・Metroの空きポートと `https://<service>.expo-hono-opentofu-starter-<ID>.localhost` を割り当て、PostgreSQLとvolumeはworktreeごとに分離する。DBポートはホストへ公開しない。
 
-Expo GoでiPhone・Androidから開く場合は、上の起動をCtrl+Cで止めてトンネル用構成を使う。
+Simulator／Emulatorの日常開発はDevelopment BuildとホストのExpo Device Hubを使う。`bun run dev:devices` でComposeのMetro・API・認証を端末向けに設定し、別ターミナルの `bun run devices` でHubを開く。macOS・Ubuntu・Windows／WSL2の準備、手動ビルドとADB転送は [セットアップ](docs/setup.md#ホストosの準備)を参照する。
+
+Expo GoでiPhone・Android実機から開く場合は、上の起動をCtrl+Cで止めてトンネル用構成を使う。
 
 ```sh
 PORTLESS_HTTPS=1 PORTLESS_PORT=443 portless compose \
@@ -57,6 +59,8 @@ Dev Containers対応エディタでは **Reopen in Container** で編集・検�
 | ----------------------------------------------- | -------------------------------------------------- |
 | `bun run setup`                                 | worktree設定と未作成のアプリenvを生成              |
 | `bun run dev`                                   | ホストからComposeのDB・API・Metroを起動            |
+| `bun run dev:devices`                           | 仮想端末向けにHTTPS接続を設定してCompose起動       |
+| `bun run devices`                               | ホストのExpo Device Hubを起動                      |
 | `bun run dev:go`                                | Expo Go用のMetroトンネル付きで起動                 |
 | `bun run check`                                 | 整形、型付きlint、型検査、Bun/Jestテスト、Fallow   |
 | `bun run test:integration`                      | PostgreSQLを使った認証・認可テスト                 |
