@@ -49,6 +49,8 @@ AndroidのMaterial色は参照時に解決されるため、`useColors` で外�
 
 Better Authが認証し、Honoの `requireSession` と所有者条件が投稿・削除・いいねを認可する。入力はZod、いいねは複合主キーで冪等。公開フィードは著者ID・表示名・画像だけを返し、メールを公開しない。マジックリンクは10分・単回利用・ハッシュ保存、WebAuthnは署名／challenge／originを検証する。共通rate limitはDB保存。
 
+プロフィール更新は認証済みの本人だけが行える。端末が写真を選択・縮小し、APIが最大256 KiBのJPEGを検証して512px正方形に再エンコードする。メタデータを落とした画像1枚をPostgreSQLの `avatar` テーブルに保存し、表示名と画像URLを同じトランザクションで更新する。ローカルでも追加のストレージ設定は要らない。フィードとプロフィールには画像URLだけを返す。既存のOAuth・seed画像URLは、利用者が写真を変更または削除するまで使い続ける。保存後はセッションと該当ユーザーのキャッシュを更新し、他の投稿を再取得しない。
+
 認証CookieはDomain属性を指定せず、発行元のAPIホストに限定する。MetroやEmulateとの親ドメイン共有は不要。ネイティブはBetter Auth ExpoのSecureStoreとCookie送信を使う。PasskeyのRP IDはCookie共有とは別の設定である。
 
 Google／AppleのEmulate issuer・JWKS・token endpointを使うgenericOAuthを開発時だけ登録する。実署名のID tokenを検証し、認証バイパスは設けない。本番でのEmulate起動と公開エミュレータURLを拒否する。メールはResend互換エミュレータへ送る。[設定と検証](auth.md)を参照。

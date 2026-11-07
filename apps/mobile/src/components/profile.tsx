@@ -1,4 +1,4 @@
-import { Button as NativeButton } from '@expo/ui';
+import { Button as NativeButton, Row, Spacer, Text as NativeText } from '@expo/ui';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { View } from 'react-native';
@@ -83,12 +83,18 @@ export function Profile({ id }: { id?: string }) {
             {session?.user.id === person.id ? (
               <NativeHost matchContents={{ vertical: true }} style={{ alignSelf: 'stretch' }}>
                 <NativeButton
-                  label="プロフィールを編集"
                   variant="outlined"
+                  style={{ width: '100%' }}
                   onPress={() => {
                     router.push('/profile-edit');
                   }}
-                />
+                >
+                  <Row alignment="center" style={{ width: '100%' }}>
+                    <Spacer flexible />
+                    <NativeText textStyle={{ textAlign: 'center' }}>プロフィールを編集</NativeText>
+                    <Spacer flexible />
+                  </Row>
+                </NativeButton>
               </NativeHost>
             ) : null}
           </View>

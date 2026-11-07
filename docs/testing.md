@@ -158,3 +158,8 @@ iPhone/Android実機での接続・認証、新しいDev Containerイメージ�
 - mainのUniwind構成を取り込んだ後も `bun run check` とHTTPS bundle取得が成功。生成型・Metro設定・CSS生成のCI検査を維持した。
 
 ブラウザの警告を消すためのOSへのCA信頼登録、iPhone/Android実機での接続・認証は未実施。通常利用時はホストで `portless trust` を行う。共有HTTP proxyのHTTPSへの切替は、利用中worktreeを止めた上でホスト側で一度行い、各worktreeの停止処理からは行わない。
+
+## プロフィール編集
+
+- BunのPostgreSQL統合テストで、未認証の更新拒否、他ユーザーの保護、不正な画像の拒否、名前と写真の保存、JPEGの配信、画像の置換・削除を確認する。JestとTesting Libraryで写真選択のキャンセル、空の表示名、通信失敗後の再保存、投稿キャッシュの更新範囲を確認する。
+- iPhone 17 Pro Simulator（iOS 26.5、Expo Go）とPixel 8 Emulator（API 36、Development Build）で、写真選択・切り抜き・プレビュー、名前入力と保存、マイページへの反映を確認した。iOSでは変更の破棄、Androidでは写真の削除と標準の戻る操作を確認した。物理端末は未確認。

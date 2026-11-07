@@ -5,7 +5,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-naviga
 import { Stack } from 'expo-router/stack';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
-import { useColorScheme } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 
 import { PreferencesProvider } from '@/lib/preferences';
 import { useStackOptions } from '@/theme/navigation';
@@ -32,9 +32,13 @@ function Navigation() {
           name="profile-edit"
           options={{
             title: 'プロフィール',
-            presentation: 'formSheet',
-            sheetAllowedDetents: [0.4, 0.75],
-            sheetGrabberVisible: true,
+            ...(Platform.OS === 'android'
+              ? { presentation: 'card' }
+              : {
+                  presentation: 'formSheet',
+                  sheetAllowedDetents: [0.65, 1],
+                  sheetGrabberVisible: true,
+                }),
           }}
         />
         <Stack.Screen name="auth-callback" options={{ title: 'ログイン' }} />

@@ -38,6 +38,14 @@
         }
       ],
       "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "プロフィールのアイコンに使う写真を選択します。",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
       "expo-sqlite",
       "expo-font"
     ],

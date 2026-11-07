@@ -1,6 +1,8 @@
 import { afterAll, expect, test } from 'bun:test';
 import { inArray } from 'drizzle-orm';
 import { createEmulator } from 'emulate';
+import { randomBytes } from 'node:crypto';
+import sharp from 'sharp';
 import { z } from 'zod';
 
 import { createApp } from './app';
@@ -15,6 +17,8 @@ const { db, pool } = connectDatabase(databaseUrl);
 const unique = crypto.randomUUID();
 const email = `auth-${unique}@example.com`;
 const secondEmail = `other-${unique}@example.com`;
+const profileEmail = `profile-${unique}@example.com`;
+const profileOtherEmail = `profile-other-${unique}@example.com`;
 const baseURL = 'http://localhost:8080';
 const origin = 'http://localhost:8081';
 const google = await createEmulator({
@@ -83,7 +87,9 @@ function request(path: string, body: unknown, cookie = '', method = 'POST') {
   });
 }
 afterAll(async () => {
-  await db.delete(user).where(inArray(user.email, [email, secondEmail]));
+  await db
+    .delete(user)
+    .where(inArray(user.email, [email, secondEmail, profileEmail, profileOtherEmail]));
   await Promise.all([pool.end(), google.close(), apple.close(), mail.close()]);
 });
 
@@ -167,6 +173,68 @@ test('Google/Apple OAuth use verified sessions and link the same verified email'
     .parse(await (await app.request('/api/me', { headers: { cookie: appleCookie } })).json());
   expect(first.user.email).toBe(email);
   expect(second.user.id).toBe(first.user.id);
+}, 20000);
+
+test('profile edits validate photos, update only the signed-in user, and replace the public avatar', async () => {
+  const cookie = cookies(await app.request((await emailLink(profileEmail)).href));
+  const other = cookies(await app.request((await emailLink(profileOtherEmail)).href));
+  const profile = z.object({
+    user: z.object({ id: z.string(), name: z.string(), image: z.string().nullable() }),
+  });
+  const session = (headers: string) =>
+    app.request('/api/auth/get-session', { headers: { cookie: headers } });
+  const before = profile.parse(await (await session(cookie)).json()).user;
+  const otherBefore = profile.parse(await (await session(other)).json()).user;
+  const update = (body: unknown, authCookie = cookie) =>
+    request('/api/me/profile', body, authCookie, 'PUT');
+
+  expect((await update({ name: 'ゲスト' }, '')).status).toBe(401);
+  expect((await update({ name: '   ' })).status).toBe(400);
+  expect((await update({ name: '無効な写真', avatar: 'aGVsbG8=' })).status).toBe(400);
+  expect(profile.parse(await (await session(cookie)).json()).user).toEqual(before);
+
+  // A noisy, nonsquare JPEG exercises the profile-specific body limit and re-encoding.
+  const input = await sharp(randomBytes(640 * 480 * 3), {
+    raw: { width: 640, height: 480, channels: 3 },
+  })
+    .jpeg({ quality: 72 })
+    .toBuffer();
+  expect(input.length).toBeGreaterThan(64 * 1024);
+  const saved = await update({
+    name: '  新しい名前  ',
+    avatar: input.toString('base64'),
+    userId: otherBefore.id,
+  });
+  expect(saved.status).toBe(200);
+  const changed = profile.parse(await saved.json()).user;
+  expect(changed).toMatchObject({ id: before.id, name: '新しい名前' });
+  expect(profile.parse(await (await session(cookie)).json()).user).toEqual(changed);
+  expect(profile.parse(await (await session(other)).json()).user).toEqual(otherBefore);
+
+  const path = z.string().parse(changed.image);
+  const image = await app.request(path);
+  expect(image.status).toBe(200);
+  expect(image.headers.get('content-type')).toBe('image/jpeg');
+  expect(image.headers.get('x-content-type-options')).toBe('nosniff');
+  expect(await sharp(Buffer.from(await image.arrayBuffer())).metadata()).toMatchObject({
+    format: 'jpeg',
+    width: 512,
+    height: 512,
+  });
+  const etag = z.string().parse(image.headers.get('etag'));
+  expect((await app.request(path, { headers: { 'if-none-match': etag } })).status).toBe(304);
+
+  const rename = await update({ name: '名前だけ変更' });
+  expect(profile.parse(await rename.json()).user.image).toBe(path);
+
+  const replacement = await update({ name: '名前だけ変更', avatar: input.toString('base64') });
+  const nextPath = z.string().parse(profile.parse(await replacement.json()).user.image);
+  expect(nextPath).not.toBe(path);
+  expect((await app.request(path)).status).toBe(404);
+
+  const removed = await update({ name: '名前だけ変更', avatar: null });
+  expect(profile.parse(await removed.json()).user.image).toBeNull();
+  expect((await app.request(nextPath)).status).toBe(404);
 }, 20000);
 
 test('magic links are single-use and sessions protect posts, likes and deletion', async () => {
