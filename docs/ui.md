@@ -4,7 +4,7 @@
 
 主要SNS機能はXを参考にした独自UIを使う。タイムラインは左にアバター、右に名前・日時・本文・いいね／共有を配置する。本文・反応はReusables／Uniwind、プロフィールは独立したユーザーの概要とネイティブ編集ボタンを使う。投稿者のアイコンからユーザー→投稿一覧へ移動できる。投稿カードは外側の横余白12pt・カード間8pt・角丸16pt、内側は横と上12pt。40ptアバターと8ptの間隔で密度を保ち、いいね・共有は右寄せで4pt間隔にする。操作のタップ領域は48pt/dp以上にする。未実装の返信・リポスト・フォローを操作可能なボタンとして置かない。
 
-Native Tabs・Stack・戻る操作・共有シートはOS標準。設定はネイティブのForm／Picker／Switchを使う。投稿とiOSのプロフィール編集シートは65%の高さから開く。Androidのプロフィール編集はOS標準の戻る操作と、保存を表すチェックアイコンを持つStack画面にする。iOS 26の投稿導線はタブ直上のBottomAccessory、それ以前とAndroidはツールバー。画面背景はOSセマンティックカラー、独自コンテンツはneutralテーマ。アプリ独自のグリーンは使わない。
+Native Tabs・Stack・戻る操作・共有シートはOS標準。設定はネイティブのForm／Picker／Switchを使う。投稿とiOSのプロフィール編集シートは65%の高さから開く。Androidのプロフィール編集はOS標準の戻る操作と、保存を表すチェックアイコンを持つStack画面にする。iOS 26のホームの投稿導線はタブ直上のBottomAccessory、それ以前とAndroidはツールバー。画面背景はOSセマンティックカラー、独自コンテンツはneutralテーマ。アプリ独自のグリーンは使わない。
 
 プロフィール編集は、現在の写真と選択・削除の操作を上部にまとめ、下に「表示名」の入力欄を置く。写真の選択後はシート内で確認でき、「保存」で表示名と一緒に反映する。ヘッダーの「保存」は有効な変更がある場合だけ使える。未保存のまま閉じるときは確認する。[MobbinのReddit](https://mobbin.com/screens/0c97523a-413e-41b9-ad43-553e22025d48)のラベルとヘッダー操作、[Luma](https://mobbin.com/screens/484bd454-399f-42f1-b76b-2a34ad4322de)の写真の配置と未変更時の保存状態を参考にした。
 
@@ -19,9 +19,19 @@ Googleは公式の多色ロゴ付き白ボタン、AppleはiOSの公式AppleAuth
 - `Button` は `variant`／`size`／`onPress`／`disabled`、`Text` は `variant`／`asChild` を提供する。ラベルにはローカルの `Text` を使うとButtonのvariantに追従する。アイコンのみの操作には明示的なaccessibilityLabelを付ける。
 - Portal・アニメーション・アイコン用の追加依存は初期構成に含めない。現在のText／Buttonには不要で、独自のoverlayは実際に必要になったときだけ導入する。
 
+## 空・読み込み・失敗
+
+ホーム、マイページ、他ユーザーの投稿一覧では、空状態にアイコン・見出し・説明を中央に配置し、上下左右に余白を取る。マイページではユーザー概要と「投稿」見出しの下に置く。ホームでは大きなナビゲーションタイトルから続く位置に空状態を置き、ホームの投稿ショートカットを使う。ゲストはそこからログインに進める。空のマイページには最初の投稿を作るボタンを置く。
+
+初回読み込みでは、取得するプロフィール概要や投稿カードと同じ形の静止スケルトンを使う。読み込み中だと読み上げ、仮の文章や操作ボタンを読み上げない。概要が取得済みなら投稿一覧の読み込みや失敗でも残す。更新時の失敗は取得済みの投稿と再試行を表示する。スケルトン、空、失敗は同時に表示しない。
+
+[Apple HIGの読み込み](https://developer.apple.com/design/human-interface-guidelines/loading)と[空状態のシステム表示](https://developer.apple.com/documentation/uikit/uicontentunavailableconfiguration-swift.struct)に合わせ、一覧のセーフエリアと余白を全状態で確認する。[端末検証手順](testing.md#投稿一覧の状態を端末で確認する)を使う。
+
 ## 文字とアイコンと日時
 
 独自UIのサイズは `global.css` の `text-body`（17/24pt）、`text-caption`（13/18pt）、`text-title`（22/28pt）に集約する。名前はbodyのsemibold、本文・操作ラベルはbody、日時・反応数・補足はcaption。`lib/utils.ts` のtailwind-mergeにもこの3つを文字サイズとして登録し、文字色を上書きさせない。ネイティブのナビゲーション・FormはOSの文字スタイルを使う。Dynamic Typeは無効化しない。
+
+プロフィール編集・写真選択・写真削除・再試行など、認識しやすい操作には意味に合うSF SymbolsとAndroidのMaterialアイコンを添える。本文のボタンはアイコンと日本語ラベルを組み合わせ、閉じる・保存などのツールバーアイコンはアクセシブルな名前を設定する。[Apple HIGのボタン](https://developer.apple.com/design/human-interface-guidelines/buttons)を参照。
 
 操作アイコンは `theme/metrics.ts` の20pt。アバターは投稿40pt、ユーザー概要80pt。補助的なchevronとOSのタブアイコンは役割の違う標準サイズを保つ。Google／Appleの公式ロゴはブランド規約を優先する。
 

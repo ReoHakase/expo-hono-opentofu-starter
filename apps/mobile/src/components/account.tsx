@@ -1,4 +1,4 @@
-import { Button, Column, Icon, TextInput } from '@expo/ui';
+import { Column, Icon, TextInput } from '@expo/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
@@ -8,9 +8,9 @@ import { useState } from 'react';
 import { Platform, View } from 'react-native';
 
 import { AppleButton } from '@/components/apple-button';
-import { AuthButton } from '@/components/auth-button';
 import { Feedback } from '@/components/feedback';
 import { GoogleButton } from '@/components/google-button';
+import { NativeActionButton } from '@/components/native-action-button';
 import { NativeHost } from '@/components/native-host';
 import { Screen } from '@/components/screen';
 import { Text } from '@/components/ui/text';
@@ -117,7 +117,11 @@ export function Account() {
       </Text>
       {session.data ? (
         <NativeHost matchContents={{ vertical: true }}>
-          <Button
+          <NativeActionButton
+            icon={Icon.select({
+              ios: 'text.bubble',
+              android: import('@expo/material-symbols/chat_bubble.xml'),
+            })}
             label="タイムラインに戻る"
             onPress={() => {
               router.replace('/');
@@ -144,7 +148,9 @@ export function Account() {
               />
             ) : null}
             <NativeHost matchContents={{ vertical: true }}>
-              <AuthButton
+              <NativeActionButton
+                variant="outlined"
+                fullWidth
                 label="パスキーでログイン"
                 icon={Icon.select({
                   ios: 'person.badge.key.fill',
@@ -181,7 +187,9 @@ export function Account() {
                     }}
                     editable={!login.isPending}
                   />
-                  <AuthButton
+                  <NativeActionButton
+                    variant="outlined"
+                    fullWidth
                     label={login.isPending ? '処理中' : 'ログインリンクを送信'}
                     icon={Icon.select({
                       ios: 'envelope',
@@ -215,7 +223,11 @@ export function Account() {
         </Text>
       ) : null}
       <NativeHost matchContents={{ vertical: true }}>
-        <Button
+        <NativeActionButton
+          icon={Icon.select({
+            ios: 'text.bubble',
+            android: import('@expo/material-symbols/chat_bubble.xml'),
+          })}
           label="タイムラインを見る"
           variant="outlined"
           onPress={() => {

@@ -1,6 +1,7 @@
-import { Button } from '@expo/ui';
+import { Icon } from '@expo/ui';
 import { ActivityIndicator, View } from 'react-native';
 
+import { NativeActionButton } from '@/components/native-action-button';
 import { NativeHost } from '@/components/native-host';
 import { Screen } from '@/components/screen';
 import { Text } from '@/components/ui/text';
@@ -24,7 +25,14 @@ export function Feedback({
       </Text>
       {onRetry ? (
         <NativeHost matchContents={{ vertical: true }}>
-          <Button label="もう一度試す" onPress={onRetry} />
+          <NativeActionButton
+            label="もう一度試す"
+            icon={Icon.select({
+              ios: 'arrow.clockwise',
+              android: import('@expo/material-symbols/refresh.xml'),
+            })}
+            onPress={onRetry}
+          />
         </NativeHost>
       ) : null}
     </View>

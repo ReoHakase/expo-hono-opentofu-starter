@@ -43,6 +43,8 @@ AndroidのMaterial色は参照時に解決されるため、`useColors` で外�
 
 外観と触覚は `expo-sqlite/kv-store`。投稿といいねはPostgreSQLに保存し、ログインユーザーに紐付く。以前の習慣・お気に入り・完了・目標はSNSサンプルから除いた。API未設定時は接続案内を表示する。
 
+投稿一覧は空・初回読み込み・失敗でも同じFlatListと取得済みのプロフィール概要を使う。空・失敗の説明は中央に配置し、初回読み込みは投稿カードの枠を共有した静止スケルトンで表す。再取得では既存の投稿を残し、手動のpull-to-refreshとは区別する。端末検証では専用worktreeのAPIを使って状態を作り、アプリに検証用の遅延や状態切替を組み込まない。
+
 ## APIと認証の境界
 
 `tablecast-poc/apps/api` のcomposition rootとモジュール公開入口を参考に、`app.ts`、`env.ts`、`db`、`modules/auth`、`modules/social` へ分離した。organization／店舗・Cloudflare固有処理は持ち込まない。公開RPCは `contract.ts` の型だけ。

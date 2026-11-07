@@ -9,6 +9,7 @@ import type { Post, FeedData } from '@/lib/social';
 
 import { Avatar } from '@/components/avatar';
 import { Feedback } from '@/components/feedback';
+import { PostCard } from '@/components/post-card';
 import { SocialIcon } from '@/components/social-icon';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -78,10 +79,7 @@ export const PostRow = memo(function PostRow({
     onSuccess: () => client.invalidateQueries({ queryKey: ['posts'] }),
   });
   return (
-    <View
-      className="mx-3 mb-2 flex-row gap-2 rounded-2xl px-3 pt-3"
-      style={{ backgroundColor: colors.card }}
-    >
+    <PostCard>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${item.author.name}のプロフィール`}
@@ -201,6 +199,6 @@ export const PostRow = memo(function PostRow({
           />
         ) : null}
       </View>
-    </View>
+    </PostCard>
   );
 });

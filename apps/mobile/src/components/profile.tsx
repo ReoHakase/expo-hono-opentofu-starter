@@ -1,22 +1,51 @@
-import { Button as NativeButton, Row, Spacer, Text as NativeText } from '@expo/ui';
+import type { ReactNode } from 'react';
+
+import { Icon } from '@expo/ui';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { View } from 'react-native';
+import { useWindowDimensions, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
+import { ContentError, ContentState } from '@/components/content-state';
 import { Feed } from '@/components/feed';
+import { FeedSkeleton } from '@/components/feed-skeleton';
 import { Feedback } from '@/components/feedback';
+import { NativeActionButton } from '@/components/native-action-button';
 import { NativeHost } from '@/components/native-host';
 import { Screen } from '@/components/screen';
-import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/skeleton';
 import { Text } from '@/components/ui/text';
 import { api, apiUrl, authClient } from '@/lib/api';
 import { useColors } from '@/theme/colors';
 import { avatarSize } from '@/theme/metrics';
 
+function ProfileCard({ children }: { children: ReactNode }) {
+  const colors = useColors();
+  return (
+    <View
+      style={{
+        marginHorizontal: 20,
+        padding: 24,
+        borderRadius: 20,
+        backgroundColor: colors.card,
+        gap: 16,
+        alignItems: 'center',
+      }}
+    >
+      {children}
+    </View>
+  );
+}
+
 export function Profile({ id }: { id?: string }) {
   const colors = useColors();
-  const { data: session, isPending } = authClient.useSession();
+  const { fontScale } = useWindowDimensions();
+  const {
+    data: session,
+    error: sessionError,
+    isPending,
+    refetch: refetchSession,
+  } = authClient.useSession();
   const profile = useQuery({
     queryKey: ['user', id],
     enabled: Boolean(id && apiUrl),
@@ -31,33 +60,67 @@ export function Profile({ id }: { id?: string }) {
   if (id && !apiUrl) {
     return <Feedback fullScreen message="接続先が未設定です。" />;
   }
-  if (id ? profile.isPending : isPending) {
-    return <Feedback fullScreen loading message="プロフィールを読み込んでいます" />;
-  }
-  if (id && profile.isError) {
+  if (id ? profile.isPending : isPending && !session) {
     return (
-      <Feedback
-        fullScreen
-        message={profile.error.message}
-        onRetry={() => {
-          void profile.refetch();
-        }}
-      />
+      <Screen contentContainerStyle={{ paddingHorizontal: 0 }}>
+        <FeedSkeleton
+          label="プロフィールを読み込んでいます"
+          header={
+            <View style={{ paddingBottom: 24 }}>
+              <ProfileCard>
+                <Skeleton
+                  style={{
+                    width: avatarSize * 2,
+                    height: avatarSize * 2,
+                    borderRadius: avatarSize,
+                  }}
+                />
+                <Skeleton style={{ width: '45%', height: 24 * fontScale }} />
+                {!id ? <Skeleton style={{ width: '100%', height: 44 }} /> : null}
+              </ProfileCard>
+            </View>
+          }
+        />
+      </Screen>
+    );
+  }
+  if (id ? profile.isError && !profile.data : sessionError && !session) {
+    return (
+      <Screen>
+        <ContentError
+          title={id ? 'プロフィールを読み込めませんでした' : 'アカウントを確認できませんでした'}
+          onRetry={() => {
+            void (id ? profile.refetch() : refetchSession());
+          }}
+        />
+      </Screen>
     );
   }
   const person = id ? profile.data?.user : session?.user;
   if (!person) {
     return (
       <Screen>
-        <Text className="text-muted-foreground">自分の投稿を確認するにはログインしてください</Text>
-        <Button
-          className="rounded-full"
-          onPress={() => {
-            router.push('/account');
-          }}
+        <ContentState
+          icon={Icon.select({
+            ios: 'person.crop.circle',
+            android: import('@expo/material-symbols/account_circle.xml'),
+          })}
+          title="マイページを表示"
+          description="自分の投稿を確認するにはログインしてください"
         >
-          <Text>ログイン</Text>
-        </Button>
+          <NativeHost matchContents style={{ maxWidth: '100%' }}>
+            <NativeActionButton
+              label="ログイン"
+              icon={Icon.select({
+                ios: 'rectangle.portrait.and.arrow.right',
+                android: import('@expo/material-symbols/login.xml'),
+              })}
+              onPress={() => {
+                router.push('/account');
+              }}
+            />
+          </NativeHost>
+        </ContentState>
       </Screen>
     );
   }
@@ -66,38 +129,28 @@ export function Profile({ id }: { id?: string }) {
       authorId={person.id}
       header={
         <View style={{ paddingTop: 20, backgroundColor: colors.background }}>
-          <View
-            style={{
-              marginHorizontal: 20,
-              padding: 24,
-              borderRadius: 20,
-              backgroundColor: colors.card,
-              gap: 16,
-              alignItems: 'center',
-            }}
-          >
+          <ProfileCard>
             <Avatar size={avatarSize * 2} image={person.image} />
             <Text variant="h3" className="text-center font-bold">
               {person.name}
             </Text>
             {session?.user.id === person.id ? (
               <NativeHost matchContents={{ vertical: true }} style={{ alignSelf: 'stretch' }}>
-                <NativeButton
+                <NativeActionButton
+                  label="プロフィールを編集"
+                  icon={Icon.select({
+                    ios: 'pencil',
+                    android: import('@expo/material-symbols/edit.xml'),
+                  })}
                   variant="outlined"
-                  style={{ width: '100%' }}
+                  fullWidth
                   onPress={() => {
                     router.push('/profile-edit');
                   }}
-                >
-                  <Row alignment="center" style={{ width: '100%' }}>
-                    <Spacer flexible />
-                    <NativeText textStyle={{ textAlign: 'center' }}>プロフィールを編集</NativeText>
-                    <Spacer flexible />
-                  </Row>
-                </NativeButton>
+                />
               </NativeHost>
             ) : null}
-          </View>
+          </ProfileCard>
           <View style={{ paddingHorizontal: 20, paddingTop: 28, paddingBottom: 12 }}>
             <Text accessibilityRole="header" className="font-semibold text-muted-foreground">
               投稿

@@ -1,4 +1,4 @@
-import { Button, Column, Icon, Row, Spacer, Text as NativeText, TextInput } from '@expo/ui';
+import { Column, Icon, Row, Spacer, Text as NativeText, TextInput } from '@expo/ui';
 import { profileInputSchema } from '@starter/shared';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
@@ -12,6 +12,7 @@ import type { ProfilePhoto } from '@/lib/profile-photo';
 
 import { Avatar } from '@/components/avatar';
 import { Feedback } from '@/components/feedback';
+import { NativeActionButton } from '@/components/native-action-button';
 import { NativeHost } from '@/components/native-host';
 import { Screen } from '@/components/screen';
 import { authClient } from '@/lib/api';
@@ -27,6 +28,8 @@ function Cancel({ disabled = false }: { disabled?: boolean }) {
   return (
     <Stack.Toolbar placement="left">
       <Stack.Toolbar.Button
+        accessibilityLabel="キャンセル"
+        icon={Icon.select({ ios: 'xmark', android: import('@expo/material-symbols/close.xml') })}
         disabled={disabled}
         onPress={() => {
           router.back();
@@ -119,15 +122,11 @@ function Editor({
           accessibilityLabel="プロフィールを保存"
           disabled={!canSave}
           variant="done"
-          {...(Platform.OS === 'android'
-            ? {
-                ...(!canSave ? { tintColor: colors.secondary } : {}),
-                icon: Icon.select({
-                  ios: 'checkmark',
-                  android: import('@expo/material-symbols/check.xml'),
-                }),
-              }
-            : {})}
+          icon={Icon.select({
+            ios: 'checkmark',
+            android: import('@expo/material-symbols/check.xml'),
+          })}
+          {...(Platform.OS === 'android' && !canSave ? { tintColor: colors.secondary } : {})}
           onPress={() => {
             save.mutate();
           }}
@@ -141,7 +140,11 @@ function Editor({
           <NativeHost matchContents={{ vertical: true }} style={{ alignSelf: 'stretch' }}>
             <Column alignment="center" style={{ width: '100%' }}>
               <PhotoActions spacing={8}>
-                <Button
+                <NativeActionButton
+                  icon={Icon.select({
+                    ios: 'photo.on.rectangle',
+                    android: import('@expo/material-symbols/photo_library.xml'),
+                  })}
                   label={choosing ? '写真を準備中' : '写真を選ぶ'}
                   variant="text"
                   disabled={busy}
@@ -150,7 +153,11 @@ function Editor({
                   }}
                 />
                 {image ? (
-                  <Button
+                  <NativeActionButton
+                    icon={Icon.select({
+                      ios: 'trash',
+                      android: import('@expo/material-symbols/delete.xml'),
+                    })}
                     label="写真を削除"
                     variant="text"
                     disabled={busy}
@@ -220,7 +227,11 @@ export function ProfileEdit() {
           <Screen>
             <Feedback message="ログインしてください" />
             <NativeHost matchContents={{ vertical: true }}>
-              <Button
+              <NativeActionButton
+                icon={Icon.select({
+                  ios: 'rectangle.portrait.and.arrow.right',
+                  android: import('@expo/material-symbols/login.xml'),
+                })}
                 label="ログイン"
                 onPress={() => {
                   router.replace('/account');
