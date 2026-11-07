@@ -11,8 +11,10 @@ import { Platform } from 'react-native';
 import { readEnv } from '@/env';
 
 export const apiUrl = readEnv().EXPO_PUBLIC_API_URL ?? null;
+const baseURL = apiUrl ?? 'http://localhost:8080';
+
 export const authClient = createAuthClient({
-  baseURL: apiUrl ?? 'http://localhost:8080',
+  baseURL,
   plugins: [
     expoClient({
       scheme: 'expo-hono-opentofu-starter',
@@ -24,7 +26,8 @@ export const authClient = createAuthClient({
   ],
   fetchOptions: { timeout: 10000 },
 });
-export const api = hc<AppType>(apiUrl ?? 'http://localhost:8080', {
+export const api = hc<AppType>(baseURL, {
   headers: async () => (Platform.OS === 'web' ? {} : { cookie: await authClient.getCookie() }),
   init: { credentials: Platform.OS === 'web' ? 'include' : 'omit' },
 });
+export const publicApi = hc<AppType>(baseURL, { init: { credentials: 'omit' } });

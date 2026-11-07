@@ -1,3 +1,5 @@
+import type { QueryFilters } from '@tanstack/react-query';
+
 import { Icon } from '@expo/ui';
 import { useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
@@ -15,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { formatPostDate } from '@/lib/date';
 import { usePreferences } from '@/lib/preferences';
-import { changeLike, deletePost, updateFeedPost } from '@/lib/social';
+import { changeLike, deletePost, feedKey, updateFeedPost } from '@/lib/social';
 import { useColors } from '@/theme/colors';
 import { avatarSize } from '@/theme/metrics';
 
@@ -38,18 +40,21 @@ export const PostRow = memo(function PostRow({
     mutationKey,
     mutationFn: (liked: boolean) => changeLike(item.id, liked),
     onMutate: async (liked) => {
-      const filter = { queryKey: ['posts', viewerId] };
+      const filter: QueryFilters = {
+        queryKey: [...feedKey, viewerId],
+        predicate: (query) => query.state.data !== undefined,
+      };
       await client.cancelQueries(filter);
       const previous = client.getQueriesData<FeedData>(filter).map(([key, data]) => ({
         key,
         post: data?.pages.flatMap((page) => page.items).find((post) => post.id === item.id),
       }));
       client.setQueriesData<FeedData>(filter, (data) =>
-        updateFeedPost(data, item.id, (post) => ({
-          ...post,
-          liked: !liked,
-          likeCount: Math.max(0, post.likeCount + (liked ? -1 : 1)),
-        })),
+        updateFeedPost(data, item.id, (post) =>
+          post.liked === liked
+            ? { ...post, liked: !liked, likeCount: Math.max(0, post.likeCount + (liked ? -1 : 1)) }
+            : post,
+        ),
       );
       return previous;
     },
@@ -76,7 +81,7 @@ export const PostRow = memo(function PostRow({
   });
   const remove = useMutation({
     mutationFn: deletePost,
-    onSuccess: () => client.invalidateQueries({ queryKey: ['posts'] }),
+    onSuccess: () => client.invalidateQueries({ queryKey: feedKey }),
   });
   return (
     <PostCard>

@@ -66,11 +66,7 @@ function Editor({
         ...(photo !== undefined ? { avatar: photo?.base64 ?? null } : {}),
       }),
     onSuccess: async (person) => {
-      await Promise.all([
-        client.cancelQueries({ queryKey: ['posts'] }),
-        client.cancelQueries({ queryKey: ['user', person.id], exact: true }),
-      ]);
-      applyProfileToCache(client, person);
+      await applyProfileToCache(client, person);
       await refreshSession();
     },
   });
