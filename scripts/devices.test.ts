@@ -1,4 +1,9 @@
 import { describe, expect, test } from 'bun:test';
+import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { parseEnv } from 'node:util';
 
 import { deviceOrigin } from './devices';
 
@@ -25,4 +30,92 @@ describe('device HTTPS routes', () => {
   ])('refuses insecure or nonlocal routes: %s', (output) => {
     expect(() => deviceOrigin(output)).toThrow();
   });
+});
+
+test('generates device settings before one Compose up using its resolved project name', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'starter-devices-'));
+  try {
+    await mkdir(join(root, 'scripts'));
+    await mkdir(join(root, 'bin'));
+    for (const file of ['devices.ts', 'worktree-init.sh']) {
+      await copyFile(fileURLToPath(new URL(file, import.meta.url)), join(root, 'scripts', file));
+    }
+    const initialized = Bun.spawn(['git', 'init', root], { stdout: 'ignore', stderr: 'pipe' });
+    expect(await initialized.exited).toBe(0);
+    await writeFile(
+      join(root, 'bin/docker'),
+      `#!/usr/bin/env node
+import { appendFileSync } from 'node:fs';
+appendFileSync('commands.jsonl', JSON.stringify(['docker', ...process.argv.slice(2)]) + '\\n');
+console.log('COMPOSE_PROJECT_NAME=expo-hono-opentofu-starter-123-add-something');
+`,
+      { mode: 0o755 },
+    );
+    await writeFile(
+      join(root, 'bin/portless'),
+      `#!/usr/bin/env node
+import { appendFileSync, readFileSync } from 'node:fs';
+const args = process.argv.slice(2);
+appendFileSync('commands.jsonl', JSON.stringify(['portless', ...args]) + '\\n');
+if (args[0] === 'get') console.log('https://' + args[1] + '.localhost:8443');
+else if (!readFileSync('.env.devices', 'utf8').includes('DEVICE_API_ORIGIN=')) process.exit(1);
+`,
+      { mode: 0o755 },
+    );
+    const env = { ...process.env };
+    env.PATH = `${join(root, 'bin')}:${env.PATH}`;
+    const child = Bun.spawn(['node', join(root, 'scripts/devices.ts')], {
+      cwd: root,
+      env,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    const [output, error] = await Promise.all([
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+    ]);
+    expect(error).toBe('');
+    expect(await child.exited).toBe(0);
+    const commands: unknown[] = (await readFile(join(root, 'commands.jsonl'), 'utf8'))
+      .trim()
+      .split('\n')
+      .map((line): unknown => JSON.parse(line));
+    const project = 'expo-hono-opentofu-starter-123-add-something';
+    const services = ['api', 'metro', 'google', 'apple', 'mail'];
+    expect(commands).toEqual([
+      ['docker', 'compose', 'config', '--environment'],
+      ...services.map((service) => ['portless', 'get', `${service}.${project}`, '--no-worktree']),
+      [
+        'portless',
+        'compose',
+        '--env-file',
+        '.env',
+        '--env-file',
+        '.env.devices',
+        '-f',
+        'compose.yaml',
+        '-f',
+        'compose.devices.yaml',
+        'up',
+        '-d',
+        '--build',
+        '--wait',
+        'api',
+        'metro',
+      ],
+    ]);
+    const settings = parseEnv(await readFile(join(root, '.env.devices'), 'utf8'));
+    for (const service of services) {
+      expect(settings[`DEVICE_${service.toUpperCase()}_ORIGIN`]).toBe(
+        `https://${service}.${project}.localhost:8443`,
+      );
+    }
+    expect(settings.DEVICE_EXPO_ORIGIN).toBe(`exps://metro.${project}.localhost:8443`);
+    expect(await readFile(join(root, '.env.devices.hosts'), 'utf8')).toBe(
+      `# ${project}\n127.0.0.1 ${services.map((service) => `${service}.${project}.localhost`).join(' ')}\n`,
+    );
+    expect(output).toContain('adb -s SERIAL reverse tcp:8443 tcp:8443');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });

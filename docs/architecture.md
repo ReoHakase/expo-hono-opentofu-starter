@@ -49,6 +49,8 @@ AndroidのMaterial色は参照時に解決されるため、`useColors` で外�
 
 Better Authが認証し、Honoの `requireSession` と所有者条件が投稿・削除・いいねを認可する。入力はZod、いいねは複合主キーで冪等。公開フィードは著者ID・表示名・画像だけを返し、メールを公開しない。マジックリンクは10分・単回利用・ハッシュ保存、WebAuthnは署名／challenge／originを検証する。共通rate limitはDB保存。
 
+認証CookieはDomain属性を指定せず、発行元のAPIホストに限定する。MetroやEmulateとの親ドメイン共有は不要。ネイティブはBetter Auth ExpoのSecureStoreとCookie送信を使う。PasskeyのRP IDはCookie共有とは別の設定である。
+
 Google／AppleのEmulate issuer・JWKS・token endpointを使うgenericOAuthを開発時だけ登録する。実署名のID tokenを検証し、認証バイパスは設けない。本番でのEmulate起動と公開エミュレータURLを拒否する。メールはResend互換エミュレータへ送る。[設定と検証](auth.md)を参照。
 
 `eslint-plugin-boundaries` がAPI composition root→module、social→authの公開入口、module→DB/platform/shared、モバイルroutes→UI→lib、型のみのAPI契約を強制する。禁止方向・内部ファイルの直接import・未知ファイルはエラー。`scripts/boundaries.test.ts` で許可・禁止例を実際のESLintへ通す。
@@ -57,7 +59,9 @@ Google／AppleのEmulate issuer・JWKS・token endpointを使うgenericOAuthを�
 
 正式名称、URLスキーム、保存prefixは `expo-hono-opentofu-starter`。両OSのアプリIDは `dev.reohakase.expohonopentofustarter`。旧識別子との互換処理・端末データの移行は設けず、新しいビルドと保存領域を使う。Expo owner、slug、project ID、Updates URLは既存接続を維持し、fingerprintでネイティブ互換性を管理する。
 
-worktreeの実パスをGitのhash-objectでハッシュ化した先頭12桁をIDとする。branch名やcommitに依存せず、symlinkは実パスへ正規化する。POSIXの初期化処理がルートのGit管理外 `.env` を生成する。アプリenvとsecretは各checkoutに置く。
+作業用worktreeは `expo-hono-opentofu-starter-<issue>-<topic>` と命名し、ブランチ `codex/<issue>-<topic>` と同じtopicを使う。ディレクトリ末尾名をホスト内で一意なDNSラベルに揃え、Compose標準のproject名として使う。独自の実パスハッシュと明示的なCompose nameは廃止した。同じ末尾名は親ディレクトリが異なってもprojectを共用するため、並列開発では名前を重複させない。branch変更やdetached HEADでproject名は変わらないが、ディレクトリ名を変えるとDB・volumeも別になる。
+
+POSIXの初期化処理はcheckoutとGit共通ディレクトリの実パスだけをルートのGit管理外 `.env` へ生成する。symlinkは実パスへ正規化する。アプリenvとsecretは各checkoutに置く。旧ハッシュ名の環境からは新しい標準名のDBで開始し、旧volumeの自動移行・削除は行わない。
 
 ローカル実行はDocker Composeに統一し、ホストのPortless 0.16.0の[Compose連携](https://portless.sh/commands#docker-compose)でAPI・Metroの公開ポートとrouteを管理する。共有HTTPS/443 proxyを使い、ホスト名は `<service>.<Compose project名>.localhost`。コンテナ内の8080/8081は固定し、Portlessがloopback上の空きポートへ書き換える。DB等の非HTTPポートはPortlessの書換対象外なので、PostgreSQLはCompose内部の5432だけで待ち受ける。通常のMetroは `EXPO_PACKAGER_PROXY_URL` でbundleの公開URLもPortlessへ向け、Expo Go構成では空に戻してトンネルを優先する。
 

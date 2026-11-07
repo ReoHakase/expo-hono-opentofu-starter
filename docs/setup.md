@@ -78,12 +78,17 @@ Device HubとADBをWSL内から起動してWindowsのSDKと混在させない。
 
 ```sh
 npm install --global portless@0.16.0
-git worktree add -b codex/my-change ../my-change HEAD
-cd ../my-change
+# 起票・担当設定したIssue #123の例
+gh issue develop 123 --name codex/123-add-something --base main
+git fetch origin codex/123-add-something
+git worktree add -b codex/123-add-something ../expo-hono-opentofu-starter-123-add-something origin/codex/123-add-something
+cd ../expo-hono-opentofu-starter-123-add-something
 sh scripts/worktree-init.sh
 ```
 
-POSIXの初期化処理が実パス由来のID・Compose名・mount先をルートのGit管理外 `.env` へ保存する。branch変更やdetached HEADでもIDは変わらない。checkoutとGit共通ディレクトリをホストと同じ絶対パスでmountするため、linked worktreeでもGitが動く。`node_modules`、ルートの生成 `.env`、DB volumeは他worktreeからコピーしない。
+作業用worktreeのディレクトリは `expo-hono-opentofu-starter-<issue>-<topic>` とし、ブランチ `codex/<issue>-<topic>` と同じtopicを使う。末尾名はホスト内で一意にし、英小文字・数字・ハイフンだけで63文字以内、先頭と末尾は英数字にする。Composeはディレクトリ末尾名を標準のproject名に使うため、同じ末尾名は親ディレクトリが異なってもコンテナ・DB・volumeを共用する。main worktreeはリポジトリ名をそのまま使える。branch変更やdetached HEADではproject名は変わらない。独自ハッシュやbranch接頭辞は生成しない。
+
+POSIXの初期化処理はcheckoutとGit共通ディレクトリの実パスだけをルートのGit管理外 `.env` へ保存する。ホストと同じ絶対パスへmountするため、linked worktreeでもGitが動く。`node_modules`、ルートの生成 `.env`、DB volumeは他worktreeからコピーしない。
 
 ### 環境変数の読み込み
 
@@ -106,12 +111,12 @@ PORTLESS_HTTPS=1 PORTLESS_PORT=443 portless compose up --build api metro
 
 Composeが依存導入・未作成のアプリenv生成・PostgreSQLのhealthcheck・migrationを行う。APIはmigration後に起動し、MetroはDBを待たず起動する。APIのみなら末尾を `api`、DBなしのMetroのみなら `metro` にする。内部ポートはAPI 8080、Metro 8081、DB 5432。Google／Apple／メールのEmulateもAPIの依存として起動する。PostgreSQLはホストへ公開せず、PortlessがHTTPサービスにloopback上の空きポートを割り当てる。
 
-| サービス    | ホストからのURL                                           |
-| ----------- | --------------------------------------------------------- |
-| API         | `https://api.expo-hono-opentofu-starter-<ID>.localhost`   |
-| Metro / Web | `https://metro.expo-hono-opentofu-starter-<ID>.localhost` |
+| サービス    | ホストからのURL                                                        |
+| ----------- | ---------------------------------------------------------------------- |
+| API         | `https://api.expo-hono-opentofu-starter-123-add-something.localhost`   |
+| Metro / Web | `https://metro.expo-hono-opentofu-starter-123-add-something.localhost` |
 
-URL形式は `https://<service>.<repo>-<worktree ID>.localhost`。ホストのブラウザ用であり、iPhone/Android実機は後述のHTTPSトンネルを使う。API・Metroの内部通信は引き続きHTTPで、TLS終端はホストのPortlessが担当する。
+URL形式は `https://<service>.<worktreeディレクトリ名>.localhost`。ホストのブラウザ用であり、iPhone/Android実機は後述のHTTPSトンネルを使う。API・Metroの内部通信は引き続きHTTPで、TLS終端はホストのPortlessが担当する。
 
 実際のURLはPortlessが表示する。ホスト公開ポートは `portless compose port api 8080` / `portless compose port metro 8081` で確認できる。Portlessはprojectごとに割当を保持し、複数worktree間の衝突を避ける。開発では `.env` の空の `BETTER_AUTH_URL` をComposeのAPI originで補い、Metro originも許可originへ追加する。
 
@@ -156,7 +161,16 @@ bun run test:integration
 bun run services:down
 ```
 
-旧来のホスト実行モードと `compose.host.yaml`、独自のポート解決・プロセス監視スクリプトは廃止した。同じcheckoutのCompose project名・DB volume名は維持する。旧ホストプロセスが残っている場合は、そのターミナルでCtrl+Cしてから切り替える。
+### 旧ハッシュ名から移行する
+
+初期化を実行する前に、旧ルート `.env` の `COMPOSE_PROJECT_NAME` を確認し、そのprojectだけを停止する。`<旧ID>` は確認した値へ置き換える。
+
+```sh
+PORTLESS_HTTPS=1 PORTLESS_PORT=443 portless compose -p 'expo-hono-opentofu-starter-<旧ID>' --profile '*' down
+sh scripts/worktree-init.sh
+```
+
+初期化で旧project名をルート `.env` から除き、以降はディレクトリ名に対応する新しいDB・volumeで開始する。旧volumeは保持し、データの自動移行や削除はしない。`down -v` や共有proxyの停止・cleanは不要。他worktreeのprojectは停止しない。アプリenvとsecretは保持するが、明示した旧ローカルURLがあれば新URLへ更新する。端末用設定は `dev:devices` で再生成し、Androidのhostsにも新しい名前を追加する。新しいAPIで再ログインする。
 
 ## 2. iPhone / Android から開く
 
@@ -185,7 +199,7 @@ bun run devices
 
 Bunをホストへ入れない場合、起動は `node scripts/devices.ts`、seedは `portless compose exec api bun run --cwd apps/api db:seed`、Hubは前述の固定版npxコマンドを使う。
 
-`dev:devices` は既存のPortless Composeでサービスを起動し、Portlessの名前付きHTTPS URLを読み取る。Git管理外の `.env.devices` を生成し、`compose.devices.yaml` でアプリのAPI URLと認証の公開URLを揃える。アプリの `.env` は上書きしない。このモードの環境変数はアプリenvの保存値より優先される。内部のtoken／JWKS取得とDB・メール送信は引き続きComposeの内部アドレスを使う。
+`dev:devices` はComposeが解決したproject名でPortlessのHTTPS URLを読み取る。Git管理外の `.env.devices` を生成し、`compose.devices.yaml` でアプリのAPI URLと認証の公開URLを揃えてから、Portless Composeで一度だけbuild・起動する。アプリの `.env` は上書きしない。このモードの環境変数はアプリenvの保存値より優先される。内部のtoken／JWKS取得とDB・メール送信は引き続きComposeの内部アドレスを使う。
 
 **HTTPのPortlessでは起動を完了できない。** Better AuthのExpo認可proxyはHTTPSの認可URLを要求する。HTTPへ書き換えるだけではGoogle／Apple Emulateのログインに失敗するため、先にホストのHTTPS proxyを準備する。既存のHTTP proxyを使っている別プロジェクトがあれば勝手に停止せず、その管理者と切替を調整する。helperはHTTPの選択を検出するとコンテナの再作成前に停止する。
 

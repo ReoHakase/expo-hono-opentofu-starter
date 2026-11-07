@@ -21,7 +21,7 @@ portless proxy start --https --port 443
 PORTLESS_HTTPS=1 PORTLESS_PORT=443 portless compose up --build api metro
 ```
 
-依存導入・未作成の環境ファイル生成・DB migrationが自動で行われる。PortlessがAPI・Metroの空きポートと `https://<service>.expo-hono-opentofu-starter-<ID>.localhost` を割り当て、PostgreSQLとvolumeはworktreeごとに分離する。DBポートはホストへ公開しない。
+依存導入・未作成の環境ファイル生成・DB migrationが自動で行われる。Composeはworktreeディレクトリ名をproject名に使い、PortlessがAPI・Metroの空きポートと `https://<service>.<project>.localhost` を割り当てる。作業用ディレクトリはブランチ `codex/123-add-something` に対応する `expo-hono-opentofu-starter-123-add-something` のように、Issue番号とtopicを含むホスト内で一意な名前にする。PostgreSQLとvolumeもprojectごとに分離し、DBポートはホストへ公開しない。
 
 Simulator／Emulatorの日常開発はDevelopment BuildとホストのExpo Device Hubを使う。`bun run dev:devices` でComposeのMetro・API・認証を端末向けに設定し、別ターミナルの `bun run devices` でHubを開く。macOS・Ubuntu・Windows／WSL2の準備、手動ビルドとADB転送は [セットアップ](docs/setup.md#ホストosの準備)を参照する。
 
