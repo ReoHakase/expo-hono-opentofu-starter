@@ -1,5 +1,16 @@
 # 検証
 
+## 2026-11-07のworktree標準命名の検証
+
+- Issue #29で独自ハッシュとComposeの明示nameを削除し、`expo-hono-opentofu-starter-29-portless-defaults` と一時的な `expo-hono-opentofu-starter-29-parallel-check` の2 worktreeを起動した。既存の旧ハッシュ名projectとHTTPS proxyは維持した。
+- `bun run check` が成功。初期化・端末スクリプトのBunテスト14件でmount用パスだけの生成、旧project設定の除去、symlink、アプリenvの保持、解決済みproject名での端末設定生成と1回のbuild・起動を確認した。認証統合テストも3件／58 assertionsが成功した。
+- 通常・Expo Go・端末・editor／tunnel profileのCompose設定を検証した。Compose標準のproject名指定が開発originにも反映されることを確認した。親パスに単引用符・空白・ドル記号を含む別の一時ディレクトリでは、実コンテナからcheckoutとGit共通ディレクトリを参照できた。
+- 2 worktreeのAPI・Metro・Google／Apple／メールのHTTPS URLと、全10個のloopback公開ポートが独立した。PostgreSQLはホスト非公開。各projectの8個のvolumeとDB system identifierが異なり、同じメールアドレスで認証してもDB内のユーザーIDが異なった。
+- 実HTTPS経由のGoogle／Apple Emulate認証で、新しいAPI callbackから同じworktreeのMetroへ復帰し、`/api/me` が認証済みとなった。session CookieはSecure・HttpOnlyでDomain未指定。同じCookie jarで他worktreeのAPIを呼ぶと401となり、CORSは対応するMetro originだけを許可した。Cookie・tokenは記録していない。
+- 一時projectだけを `portless compose --profile '*' down` で停止し、残る新projectと既存projectのAPI応答を確認した。8個のvolumeが保持され、再起動後のユーザーIDとDB system identifierも維持された。旧volumeの移行・削除や共有proxyの停止は行っていない。
+
+今回の変更後のiOS／Androidネイティブ接続・再ログイン、実機、Ubuntu／Windows、Dev Containerのエディタ操作は未確認。CLI・Compose・実HTTPS APIの確認であり、端末操作の保証には代えない。製品UI・ネイティブ依存・DBスキーマは変更せず、EAS Build・OTA・本番配信も起動していない。
+
 ## 自動検査
 
 ```sh
