@@ -52,6 +52,7 @@ JestはExpo UIのネイティブ境界をmockするため、SwiftUI/Composeの�
 - `bun run check`、Expo Doctor 20/20、iOS／Android bundle生成が成功。新規テストはHTTPS originの検証と、AndroidのCA設定がdebugだけに適用されることを確認する。既存のworktree identityテストでは別checkout・branch変更・symlinkの分離を検証する。
 - Androidの `expo prebuild --platform android --no-install` が成功。生成されたdebug manifestとXMLを確認し、main manifestへユーザーCA設定が入らないことを確認した。Node 24でのExpo config読込も成功した。
 - 実Composeの5サービスが127.0.0.1だけへ公開され、PortlessのHTTPSルートと各サービスの公開originが一致することを確認した。API `/ready` とMetro `/status` が成功。アプリenvの上書き、DB削除、業務API・スキーマ変更は行っていない。
+- HTTP proxyを選んだ場合は既存コンテナを再作成する前に拒否し、HTTPS proxyのstate directoryをシェルから渡すと再起動できた。main checkoutと一時的なlinked worktreeで、生成URLがCompose project名と一致し、余分なbranch接頭辞が付かないことも確認した。
 - 起動済みPostgreSQLで認証統合テスト3 tests／58 assertionsが成功。`test:integration` に `--no-deps` を付け、通常Compose設定でEmulateを再作成して端末用URLやポートを戻してしまう副作用を防いだ。
 - EASの `development-simulator` で `developmentClient: true` と `simulator: true` を確認。手動のnative-builds workflowのサーバー検証が成功した。EAS BuildやOTA公開は起動していない。
 - macOSのiPhone 17 Pro Simulator／iOS 26.5／Expo Go 58.0.7で、Hub 0.21.0の画面転送・タップ・キーボード入力・スクロールを確認。Portless CAをSimulatorへ登録し、HTTPSで実APIとseed画像・タイムラインを表示した。いいねの2→1→2、投稿入力と送信、入力状態を保つFast Refreshを確認した。一時的な文言変更は復元済み。Google／Apple Emulateのアカウント選択からアプリへ復帰し、同じユーザーのセッションが再作成されることも確認した。メールリンクはアプリから送信し、Emulate APIで取得したリンクを同じSimulatorで開いて、送信先のテストアカウントでログインできることを確認した。

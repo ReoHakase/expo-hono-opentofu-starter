@@ -171,7 +171,14 @@ Bunをホストへ入れない場合、起動は `node scripts/devices.ts`、see
 
 `dev:devices` は既存のPortless Composeでサービスを起動し、Portlessの名前付きHTTPS URLを読み取る。Git管理外の `.env.devices` を生成し、`compose.devices.yaml` でアプリのAPI URLと認証の公開URLを揃える。アプリの `.env` は上書きしない。このモードの環境変数はアプリenvの保存値より優先される。内部のtoken／JWKS取得とDB・メール送信は引き続きComposeの内部アドレスを使う。
 
-**HTTPのPortlessでは起動を完了できない。** Better AuthのExpo認可proxyはHTTPSの認可URLを要求する。HTTPへ書き換えるだけではGoogle／Apple Emulateのログインに失敗するため、先にホストのHTTPS proxyを準備する。既存のHTTP proxyを使っている別プロジェクトがあれば勝手に停止せず、その管理者と切替を調整する。`PORTLESS_STATE_DIR` を設定済みのHTTPS proxyを使う場合は、起動・停止・CA取得を含む全コマンドに同じ値を引き継ぐ。
+**HTTPのPortlessでは起動を完了できない。** Better AuthのExpo認可proxyはHTTPSの認可URLを要求する。HTTPへ書き換えるだけではGoogle／Apple Emulateのログインに失敗するため、先にホストのHTTPS proxyを準備する。既存のHTTP proxyを使っている別プロジェクトがあれば勝手に停止せず、その管理者と切替を調整する。helperはHTTPの選択を検出するとコンテナの再作成前に停止する。
+
+別のstate directoryで起動済みのHTTPS proxyを使う場合は、その実際のパスをシェルへ明示する。起動・停止・CA取得を含む全コマンドに同じ値を引き継ぐ。Node／Portlessのコマンドへ渡す設定なので、rootの `.env.local` へ書くだけではなく `export` する。
+
+```sh
+export PORTLESS_STATE_DIR=/absolute/path/to/existing-https-state
+bun run dev:devices
+```
 
 | 接続                                      | URL                                     |
 | ----------------------------------------- | --------------------------------------- |
