@@ -1,8 +1,8 @@
 import { serveStatic } from '@hono/node-server/serve-static';
-import { avatarBase64Limit } from '@starter/shared';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { cors } from 'hono/cors';
+import { HTTPException } from 'hono/http-exception';
 import { secureHeaders } from 'hono/secure-headers';
 import { fileURLToPath } from 'node:url';
 
@@ -12,6 +12,8 @@ import type { Auth } from './modules/auth';
 
 import { authCapabilities, authRoutes } from './modules/auth';
 import { socialRoutes } from './modules/social';
+
+const limitApiBody = bodyLimit({ maxSize: 64 * 1024 });
 
 export function createApp(db: Database, auth: Auth, env: Environment, ready: () => Promise<void>) {
   const origins = env.TRUSTED_ORIGINS.split(',').map((value) => value.trim());
@@ -25,11 +27,6 @@ export function createApp(db: Database, auth: Auth, env: Environment, ready: () 
       '/sample-avatars/*',
       serveStatic({ root: fileURLToPath(new URL('../assets', import.meta.url)) }),
     )
-    .use('/api/*', (c, next) =>
-      bodyLimit({
-        maxSize: c.req.path === '/api/me/profile' ? avatarBase64Limit + 1024 : 64 * 1024,
-      })(c, next),
-    )
     .use('/api/*', cors({ origin: browserOrigins, credentials: true }))
     .use('/api/*', async (c, next) => {
       c.header('Cache-Control', 'no-store');
@@ -42,6 +39,13 @@ export function createApp(db: Database, auth: Auth, env: Environment, ready: () 
         return c.json({ error: 'forbidden_origin' as const }, 403);
       }
       await next();
+    })
+    .use('/api/*', (c, next) => {
+      // Profile uploads have their own larger limit after the session check.
+      if (c.req.method === 'PUT' && c.req.path === '/api/me/profile') {
+        return next();
+      }
+      return limitApiBody(c, next);
     })
     .get('/health', (c) => c.json({ status: 'ok' as const }))
     .get('/ready', async (c) => {
@@ -74,5 +78,11 @@ export function createApp(db: Database, auth: Auth, env: Environment, ready: () 
     .get('/api/auth-capabilities', (c) => c.json(authCapabilities(env)))
     .route('/api/auth', authRoutes(auth, env.BETTER_AUTH_URL))
     .route('/api', socialRoutes(db, auth))
-    .onError((_error, c) => c.json({ error: 'internal_error' as const }, 500));
+    .onError((error, c) => {
+      if (error instanceof HTTPException && error.status < 500) {
+        const response = error.getResponse();
+        return c.newResponse(response.body, response);
+      }
+      return c.json({ error: 'internal_error' as const }, 500);
+    });
 }
