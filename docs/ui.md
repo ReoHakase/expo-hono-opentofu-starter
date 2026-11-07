@@ -31,6 +31,10 @@ Googleは公式の多色ロゴ付き白ボタン、AppleはiOSの公式AppleAuth
 
 外観の正本は既存の `PreferencesProvider` に保存された `appearance`。設定を保存できたときに `Uniwind.setTheme('system' | 'light' | 'dark')` を適用する。UniwindがネイティブのAppearanceも更新するため、既存のNativeHost・Navigation・StatusBarと連動する。新しいテーマ保存先や独立した切替スイッチは作らない。
 
+OSセマンティックカラーは `theme/colors.ts` の `useColors()` をコンポーネント内で使う。SDK 58の `Color.android.dynamic` は参照時のAppearanceから色を解決するため、モジュールの定数へ保存しない。Hookは `useColorScheme()` を購読して外観ごとに色を再計算する。React Compilerがネイティブgetterを固定値として扱わないよう、このHookだけを `use no memo` で除外し、`useMemo` のscheme依存を維持する。画面全体のkey変更・再マウントは行わず、入力やスクロール位置を保つ。Stackも `useStackOptions()` で同じ背景を取得する。
+
+未設定・取得失敗時のアバターは、ネイティブの人物アイコンを上下の `<Spacer flexible />` で中央へ配置する。Androidの空のSpacerは既定では伸びないため、余白を等分する箇所では `flexible` を明示する。
+
 `@expo/ui` のSwiftUI／Compose要素に `className` を直接渡さない。Expo UIは公式のprops・style・modifiersで設定し、周囲のReact Native `View`／`Text`と独自UIをUniwindでスタイリングする。独自UIはHostの外側へ配置する。ネイティブツリー内部へReact Nativeを入れる必要がある場合は、共通 `@expo/ui` の `RNHostView` にReact Nativeのルート要素を渡す。
 
 ```tsx
@@ -97,6 +101,8 @@ JestはButtonの操作・disabled、Textのアクセシビリティ、外観設�
 - [UniwindのテーマとAppearance連動](https://docs.uniwind.dev/theming/basics)
 - [Uniwindの型生成](https://docs.uniwind.dev/api/generate-artifacts)
 - [Expo UI SDK 58](https://docs.expo.dev/versions/v58.0.0/sdk/ui/)
+- [Expo Router Color SDK 58](https://docs.expo.dev/versions/v58.0.0/sdk/router/color/)
+- [React Compilerの局所的な除外](https://react.dev/reference/react-compiler/directives/use-no-memo)
 
 - [MobbinのXタイムライン参照](https://mobbin.com/screens/ef7b7aa6-f2ae-4957-a3e2-6271022bad6c)
 - [Apple HIG Layout](https://developer.apple.com/design/human-interface-guidelines/layout)

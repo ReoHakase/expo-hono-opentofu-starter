@@ -8,9 +8,10 @@ import { Feedback } from '@/components/feedback';
 import { NativeHost } from '@/components/native-host';
 import { Screen } from '@/components/screen';
 import { authClient } from '@/lib/api';
-import { colors } from '@/theme/colors';
+import { useColors } from '@/theme/colors';
 
 function Editor({ initialName }: { initialName: string }) {
+  const colors = useColors();
   const [name, setName] = useState(initialName);
   const client = useQueryClient();
   const save = useMutation({

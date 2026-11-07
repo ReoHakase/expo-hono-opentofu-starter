@@ -11,10 +11,11 @@ import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { api, apiUrl, authClient } from '@/lib/api';
-import { colors } from '@/theme/colors';
+import { useColors } from '@/theme/colors';
 import { avatarSize } from '@/theme/metrics';
 
 export function Profile({ id }: { id?: string }) {
+  const colors = useColors();
   const { data: session, isPending } = authClient.useSession();
   const profile = useQuery({
     queryKey: ['user', id],

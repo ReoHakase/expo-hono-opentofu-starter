@@ -31,6 +31,8 @@ Drizzle 1.0 RCは[公式の移行手順](https://orm.drizzle.team/docs/upgrade-v
 
 独自UIはCSSのneutralテーマ、標準UIはOSセマンティックカラー。端末内の外観設定から `Uniwind.setTheme` へ一本化して連動する。Portal・Reanimated等は追加しない。[UI開発手順](ui.md)を参照。
 
+AndroidのMaterial色は参照時に解決されるため、`useColors` で外観変更を購読し、schemeに応じて再取得する。SDKのネイティブgetterをReact Compilerが固定化することを避けるため、この境界だけをコンパイル対象から外し、明示的な `useMemo` を使う。投稿行のmemo化やTanStack Queryの更新範囲、iOSのセマンティックカラーは維持する。
+
 外観と触覚は `expo-sqlite/kv-store`。投稿といいねはPostgreSQLに保存し、ログインユーザーに紐付く。以前の習慣・お気に入り・完了・目標はSNSサンプルから除いた。API未設定時は接続案内を表示する。
 
 ## APIと認証の境界

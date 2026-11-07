@@ -12,9 +12,10 @@ import { SocialIcon } from '@/components/social-icon';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { api, authClient } from '@/lib/api';
-import { colors } from '@/theme/colors';
+import { useColors } from '@/theme/colors';
 
 export function Compose() {
+  const colors = useColors();
   const { data: session } = authClient.useSession();
   const [body, setBody] = useState('');
   const client = useQueryClient();

@@ -17,10 +17,11 @@ import { NativeHost } from '@/components/native-host';
 import { authClient } from '@/lib/api';
 import { addPasskey, passkeysAvailable } from '@/lib/passkeys';
 import { usePreferences } from '@/lib/preferences';
-import { colors } from '@/theme/colors';
+import { useColors } from '@/theme/colors';
 import { iconSize } from '@/theme/metrics';
 
 export function Settings() {
+  const colors = useColors();
   const { preferences, update, storageError } = usePreferences();
   const session = authClient.useSession();
   const client = useQueryClient();
