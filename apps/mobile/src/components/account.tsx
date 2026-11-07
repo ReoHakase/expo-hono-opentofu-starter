@@ -14,7 +14,7 @@ import { NativeActionButton } from '@/components/native-action-button';
 import { NativeHost } from '@/components/native-host';
 import { Screen } from '@/components/screen';
 import { Text } from '@/components/ui/text';
-import { api, apiUrl, authClient } from '@/lib/api';
+import { apiUrl, authClient, publicApi } from '@/lib/api';
 import { passkeysAvailable, signInWithPasskey } from '@/lib/passkeys';
 import { useColors } from '@/theme/colors';
 
@@ -28,7 +28,7 @@ export function Account() {
     queryKey: ['auth-capabilities'],
     enabled: Boolean(apiUrl),
     queryFn: async ({ signal }) => {
-      const response = await api.api['auth-capabilities'].$get({}, { init: { signal } });
+      const response = await publicApi.api['auth-capabilities'].$get({}, { init: { signal } });
       if (!response.ok) {
         throw new Error('ログイン方法を読み込めませんでした。');
       }

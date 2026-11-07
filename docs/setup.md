@@ -546,18 +546,14 @@ curl --fail "$API_ORIGIN/ready"
 
 `api_origin`出力と`service_uri`が一致することを確認する。custom domainを使う場合はDNS/ドメインマッピングを別途設定し、`api_origin`にそのHTTPS URLを渡す。
 
-準備ができたらGitHubの変数を埋め、`GCP_DEPLOY_ENABLED=true`を設定する。Expo側にproduction API URLとビルドを用意してから `EXPO_UPDATE_ENABLED=true` を設定する。以後、mainの成功したCIからmigration → candidate検証 → traffic切替 → Expo Updateの順に動く。
+準備ができたらGitHubの変数を埋め、`GCP_DEPLOY_ENABLED=true`を設定する。Expo側にproduction API URLとビルドを用意してから `EXPO_UPDATE_ENABLED=true` を設定する。以後、mainの成功したCIからmigration → candidate検証 → traffic切替 → Expo Updateの順に動く。candidateタグが見つからない、またはタグのリビジョンが予定したイメージと一致しない場合は、traffic切替前に停止する。
 
 ## 5. ハーネスと検証
 
 ```sh
 codex mcp login expo
-bun run check
-bun run test:integration
-bun run doctor
-bun run export:mobile
 ```
 
 Codexはrootの `AGENTS.md` と `.agents/skills` を使う。Expo MCPは `.codex/config.toml` に設定済み。このホストでは `codex mcp login expo` のOAuthも完了済み。MCPのOAuth、Expo CLIのログイン、GitHubの接続はそれぞれ認証する。別のホストやDev Containerでは各自ログインし、認証データはリポジトリへコピーしない。
 
-詳細な実機手順とMaestroの有料プラン条件は [testing.md](testing.md)。インフラだけの `fmt` / `init -backend=false` / `validate` / TFLintはGCP認証なしで実行できる。
+変更に応じたコマンド、端末での確認手順、Maestroの利用条件は [テスト戦略](testing.md) を参照する。

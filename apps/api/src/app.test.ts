@@ -42,11 +42,37 @@ describe('HTTP contract', () => {
       ).status,
     ).toBe(401);
   });
+  test('rejects oversized request bodies while preserving response headers', async () => {
+    const response = await app.request('/api/auth/mobile-magic-link', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: 'http://localhost:8081' },
+      body: 'x'.repeat(65 * 1024),
+    });
+    expect(response.status).toBe(413);
+    expect(response.headers.get('access-control-allow-origin')).toBe('http://localhost:8081');
+    expect(response.headers.get('cache-control')).toBe('no-store');
+  });
+  test('returns 400 for malformed JSON', async () => {
+    const response = await app.request('/api/auth/mobile-magic-link', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{',
+    });
+    expect(response.status).toBe(400);
+  });
+  test('rejects unauthenticated profile uploads before reading the body', async () => {
+    const response = await app.request('/api/me/profile', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: 'x'.repeat(400 * 1024),
+    });
+    expect(response.status).toBe(401);
+  });
   test('rejects cross-origin writes and exposes only configured login methods', async () => {
     const rejected = await app.request('/api/posts', {
       method: 'POST',
       headers: { origin: 'https://untrusted.example', 'content-type': 'application/json' },
-      body: '{}',
+      body: 'x'.repeat(65 * 1024),
     });
     expect(rejected.status).toBe(403);
     expect(rejected.headers.get('access-control-allow-origin')).toBeNull();

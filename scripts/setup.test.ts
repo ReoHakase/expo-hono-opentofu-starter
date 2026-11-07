@@ -18,7 +18,13 @@ afterEach(async () => {
 });
 
 async function run(args: string[], cwd: string) {
-  const child = Bun.spawn(args, { cwd, stdout: 'pipe', stderr: 'pipe' });
+  const child = Bun.spawn(args, {
+    cwd,
+    // Temporary repositories must not run the developer's hooks or require a signing key.
+    env: { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' },
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
   const error = await new Response(child.stderr).text();
   if ((await child.exited) !== 0) {
     throw new Error(error);

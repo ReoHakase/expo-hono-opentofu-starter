@@ -3,14 +3,15 @@ import type { InferResponseType } from 'hono/client';
 
 import { infiniteQueryOptions } from '@tanstack/react-query';
 
-import { api } from '@/lib/api';
+import { api, publicApi } from '@/lib/api';
 
 export function feedOptions(userId?: string, author?: string) {
   return infiniteQueryOptions({
     queryKey: ['posts', userId, author],
     initialPageParam: 0,
     queryFn: async ({ pageParam, signal }) => {
-      const response = await api.api.posts.$get(
+      const client = userId === undefined ? publicApi : api;
+      const response = await client.api.posts.$get(
         { query: { offset: String(pageParam), ...(author ? { author } : {}) } },
         { init: { signal } },
       );

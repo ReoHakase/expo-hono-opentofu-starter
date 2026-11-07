@@ -71,6 +71,12 @@ function Editor({
         client.cancelQueries({ queryKey: ['user', person.id], exact: true }),
       ]);
       applyProfileToCache(client, person);
+      // Cancelled first loads have no cached posts to update.
+      void client.refetchQueries({
+        queryKey: ['posts'],
+        type: 'active',
+        predicate: (query) => query.state.status === 'pending',
+      });
       await refreshSession();
     },
   });

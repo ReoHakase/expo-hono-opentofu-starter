@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node --env-file-if-exists=../api/.env --import tsx src/index.ts",
     "typecheck": "tsc --noEmit",
-    "test": "bun test src/env.test.ts"
+    "test": "bun test ./src"
   },
   "dependencies": {
     "emulate": "0.13.0",

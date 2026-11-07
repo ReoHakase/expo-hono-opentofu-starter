@@ -30,13 +30,15 @@ export function Feed({ authorId, header }: { authorId?: string; header?: ReactEl
       setDisplayTime(Date.now());
     }, []),
   );
-  const { data: session } = authClient.useSession();
+  const session = authClient.useSession();
+  const viewerId = session.data?.user.id;
+  const canFetch = Boolean(apiUrl && (viewerId !== undefined || !session.isPending));
   const feed = useInfiniteQuery({
-    ...feedOptions(session?.user.id, authorId),
-    enabled: Boolean(apiUrl),
+    ...feedOptions(viewerId, authorId),
+    enabled: canFetch,
   });
   const items = useMemo(() => feed.data?.pages.flatMap((page) => page.items) ?? [], [feed.data]);
-  const isOwnProfile = Boolean(authorId && session?.user.id === authorId);
+  const isOwnProfile = Boolean(authorId && viewerId === authorId);
   function retry() {
     void feed.refetch();
   }
@@ -102,7 +104,7 @@ export function Feed({ authorId, header }: { authorId?: string; header?: ReactEl
       testID="timeline"
       refreshing={refreshing}
       onRefresh={
-        apiUrl
+        canFetch
           ? () => {
               setDisplayTime(Date.now());
               setRefreshing(true);
@@ -132,9 +134,7 @@ export function Feed({ authorId, header }: { authorId?: string; header?: ReactEl
           {emptyState()}
         </View>
       }
-      renderItem={({ item }) => (
-        <PostRow item={item} viewerId={session?.user.id} now={displayTime} />
-      )}
+      renderItem={({ item }) => <PostRow item={item} viewerId={viewerId} now={displayTime} />}
       ListFooterComponent={
         feed.hasNextPage ? (
           <Button

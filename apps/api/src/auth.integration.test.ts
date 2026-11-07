@@ -190,6 +190,9 @@ test('profile edits validate photos, update only the signed-in user, and replace
 
   expect((await update({ name: 'ゲスト' }, '')).status).toBe(401);
   expect((await update({ name: '   ' })).status).toBe(400);
+  expect((await update({ name: '大きすぎる写真', avatar: 'A'.repeat(400 * 1024) })).status).toBe(
+    413,
+  );
   expect((await update({ name: '無効な写真', avatar: 'aGVsbG8=' })).status).toBe(400);
   expect(profile.parse(await (await session(cookie)).json()).user).toEqual(before);
 

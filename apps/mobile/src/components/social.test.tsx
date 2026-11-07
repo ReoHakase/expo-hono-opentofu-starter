@@ -87,6 +87,7 @@ jest.mock('@/lib/api', () => ({
   authClient: {
     useSession: () => ({
       refetch: mockRefreshSession,
+      isPending: mockSessionPending,
       data: mockLoggedIn
         ? {
             user: {
@@ -99,6 +100,7 @@ jest.mock('@/lib/api', () => ({
         : null,
     }),
   },
+  publicApi: { api: { posts: { $get: () => mockGetPublicPosts() } } },
   api: {
     api: {
       me: { profile: { $put: (input: unknown) => mockSaveProfile(input) } },
@@ -111,7 +113,8 @@ jest.mock('@/lib/api', () => ({
   },
 }));
 let mockLoggedIn = false;
-const mockGetPosts = jest.fn(async () => ({
+let mockSessionPending = false;
+const feedResponse = async () => ({
   ok: true,
   json: async () => ({
     items: [
@@ -134,7 +137,9 @@ const mockGetPosts = jest.fn(async () => ({
     ],
     nextOffset: null,
   }),
-}));
+});
+const mockGetPosts = jest.fn(feedResponse);
+const mockGetPublicPosts = jest.fn(feedResponse);
 const mockRefreshSession = jest.fn(async () => {});
 const mockPickPhoto = jest.fn<Promise<{ uri: string; base64: string } | null>, []>();
 const mockSaveProfile = jest.fn((_input: unknown) =>
@@ -145,6 +150,15 @@ const mockSaveProfile = jest.fn((_input: unknown) =>
 );
 const mockLike = jest.fn(async () => ({ ok: true }));
 const mockCreatePost = jest.fn(async () => ({ status: 201 }));
+
+beforeEach(() => {
+  // Advance FlatList's cell batching timer inside Testing Library's async queries.
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 function queryClient() {
   return new QueryClient({
@@ -164,7 +178,7 @@ function wrapper(client = queryClient()) {
 test('keeps the header across initial loading, failure, and retry without showing an empty feed', async () => {
   mockLoggedIn = false;
   const failed = Promise.withResolvers<Awaited<ReturnType<typeof mockGetPosts>>>();
-  mockGetPosts.mockReturnValueOnce(failed.promise);
+  mockGetPublicPosts.mockReturnValueOnce(failed.promise);
   await render(<Feed header={<Text>プロフィール概要</Text>} />, { wrapper: wrapper() });
   expect(screen.getByRole('progressbar', { name: '投稿を読み込んでいます' })).toBeOnTheScreen();
   expect(screen.getByText('プロフィール概要')).toBeOnTheScreen();
@@ -180,6 +194,28 @@ test('keeps the header across initial loading, failure, and retry without showin
   expect(screen.getByText('プロフィール概要')).toBeOnTheScreen();
   await fireEvent.press(screen.getByRole('button', { name: 'いいね 2' }));
   expect(router.push).toHaveBeenCalledWith('/account');
+});
+
+test('waits for initial session hydration before fetching the signed-in feed', async () => {
+  mockLoggedIn = false;
+  mockSessionPending = true;
+  const guestRequests = mockGetPublicPosts.mock.calls.length;
+  const signedInRequests = mockGetPosts.mock.calls.length;
+  try {
+    const feed = await render(<Feed />, { wrapper: wrapper() });
+    expect(screen.getByRole('progressbar', { name: '投稿を読み込んでいます' })).toBeOnTheScreen();
+    expect(mockGetPublicPosts).toHaveBeenCalledTimes(guestRequests);
+    expect(mockGetPosts).toHaveBeenCalledTimes(signedInRequests);
+
+    mockSessionPending = false;
+    mockLoggedIn = true;
+    await feed.rerender(<Feed />);
+    expect(await screen.findByText('こんにちは')).toBeOnTheScreen();
+    expect(mockGetPosts).toHaveBeenCalledTimes(signedInRequests + 1);
+    expect(mockGetPublicPosts).toHaveBeenCalledTimes(guestRequests);
+  } finally {
+    mockSessionPending = false;
+  }
 });
 
 test.each([

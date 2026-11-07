@@ -9,6 +9,11 @@ const cases = [
     valid: false,
   },
   {
+    file: 'apps/api/src/index.ts',
+    code: 'const { env } = process;',
+    valid: false,
+  },
+  {
     file: 'apps/api/src/env.ts',
     code: 'const url = process.env.DATABASE_URL;',
     valid: true,
@@ -44,12 +49,27 @@ const cases = [
     valid: false,
   },
   {
-    file: 'apps/api/src/modules/social/routes.ts',
+    file: 'apps/mobile/src/lib/api.ts',
+    code: "import type { AppType, PrivateType } from '@starter/api/contract';",
+    valid: false,
+  },
+  {
+    file: 'apps/mobile/src/lib/api.ts',
+    code: "import type { AppType } from '../../../api/src/contract';",
+    valid: false,
+  },
+  {
+    file: 'apps/api/src/modules/auth/service.ts',
+    code: "import { sendLoginEmail } from './mail';",
+    valid: true,
+  },
+  {
+    file: 'apps/api/src/modules/social/posts.ts',
     code: "import { requireSession } from '../auth';",
     valid: true,
   },
   {
-    file: 'apps/api/src/modules/social/routes.ts',
+    file: 'apps/api/src/modules/social/posts.ts',
     code: "import { createAuth } from '../auth/service';",
     valid: false,
   },
@@ -78,18 +98,49 @@ const cases = [
     code: "import { View } from 'react-native';",
     valid: false,
   },
+  {
+    file: 'packages/shared/src/index.ts',
+    code: "await import('node:fs');",
+    valid: false,
+  },
+  {
+    file: 'packages/shared/src/index.ts',
+    code: 'const url = process.env.DATABASE_URL;',
+    valid: false,
+  },
+  {
+    file: 'packages/shared/src/index.ts',
+    code: "import './index.test';",
+    valid: false,
+  },
+  {
+    file: 'packages/shared/src/index.ts',
+    code: "import { z } from 'zod';",
+    valid: true,
+  },
+  {
+    file: 'packages/shared/src/index.test.ts',
+    code: "import { expect } from 'bun:test';",
+    valid: true,
+  },
 ];
 for (const example of cases) {
   test(`${example.valid ? 'allows' : 'rejects'} ${example.file}: ${example.code}`, async () => {
     const results = await eslint.lintText(example.code, { filePath: example.file });
+    expect(results[0]?.fatalErrorCount).toBe(0);
     const errors = results
       .flatMap((result) => result.messages)
       .filter(
         (message) =>
           (message.ruleId ?? '').startsWith('boundaries/') ||
           message.ruleId === 'no-restricted-imports' ||
-          message.ruleId === 'no-restricted-syntax',
+          message.ruleId === 'no-restricted-globals' ||
+          message.ruleId === 'no-restricted-properties',
       );
-    expect(errors.length === 0).toBe(example.valid);
+    if (example.valid) {
+      expect(errors).toHaveLength(0);
+    } else {
+      expect(errors.length).toBeGreaterThan(0);
+    }
   });
 }
