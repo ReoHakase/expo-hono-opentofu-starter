@@ -45,20 +45,27 @@ jobs:
           test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$TARGET_SHA"
           passed=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$TARGET_SHA&status=success" --jq '[.workflow_runs[] | select(.event == "push")] | length')
           test "$passed" -gt 0 || { echo 'This SHA has not passed the main CI workflow'; exit 1; }
+      - name: Build API image before creating Google Cloud credentials
+        id: build
+        run: |
+          tag="$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/api:$TARGET_SHA"
+          docker build -f apps/api/Dockerfile -t "$tag" .
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
       - uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
       - uses: google-github-actions/setup-gcloud@v3.0.1
-      - name: Build and push immutable API image
+      - name: Push immutable API image
         id: image
+        env:
+          IMAGE_TAG: ${{ steps.build.outputs.tag }}
         run: |
           gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
-          image="$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/api:$TARGET_SHA"
-          docker build -f apps/api/Dockerfile -t "$image" .
-          docker push "$image"
-          digest=$(gcloud artifacts docker images describe "$image" --format='value(image_summary.digest)')
-          echo "uri=$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/api@$digest" >> "$GITHUB_OUTPUT"
+          docker push "$IMAGE_TAG"
+          digest=$(gcloud artifacts docker images describe "$IMAGE_TAG" --format='value(image_summary.digest)')
+          [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+          echo "uri=${IMAGE_TAG%:*}@$digest" >> "$GITHUB_OUTPUT"
       - name: Migrate before deploying
         env:
           IMAGE_URI: ${{ steps.image.outputs.uri }}
@@ -71,9 +78,13 @@ jobs:
           IMAGE_URI: ${{ steps.image.outputs.uri }}
         run: |
           gcloud run deploy "$SERVICE" --project="$PROJECT_ID" --region="$REGION" --image="$IMAGE_URI" --no-traffic --tag=candidate --quiet
-          candidate_url=$(gcloud run services describe "$SERVICE" --project="$PROJECT_ID" --region="$REGION" --format=json | jq -r '.status.traffic[] | select(.tag == "candidate") | .url')
+          candidate=$(gcloud run services describe "$SERVICE" --project="$PROJECT_ID" --region="$REGION" --format=json |
+            jq -ec '.status.traffic[] | select(.tag == "candidate")')
+          candidate_url=$(jq -er '.url | select(startswith("https://"))' <<< "$candidate")
+          revision=$(jq -er '.revisionName | select(length > 0)' <<< "$candidate")
+          image=$(gcloud run revisions describe "$revision" --project="$PROJECT_ID" --region="$REGION" --format='value(spec.containers[0].image)')
+          test "$image" = "$IMAGE_URI"
           curl --fail --retry 6 --retry-all-errors --retry-delay 5 "$candidate_url/ready"
-          revision=$(gcloud run services describe "$SERVICE" --project="$PROJECT_ID" --region="$REGION" --format='value(status.latestReadyRevisionName)')
           echo "revision=$revision" >> "$GITHUB_OUTPUT"
       - name: Promote tested revision
         env:

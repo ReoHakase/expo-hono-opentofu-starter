@@ -45,19 +45,25 @@ AndroidのMaterial色は参照時に解決されるため、`useColors` で外�
 
 投稿一覧は空・初回読み込み・失敗でも同じFlatListと取得済みのプロフィール概要を使う。空・失敗の説明は中央に配置し、初回読み込みは投稿カードの枠を共有した静止スケルトンで表す。再取得では既存の投稿を残し、手動のpull-to-refreshとは区別する。端末検証では専用worktreeのAPIを使って状態を作り、アプリに検証用の遅延や状態切替を組み込まない。
 
+フィードは最初のセッション確認を待ち、閲覧ユーザーごとにキャッシュを分ける。ゲストのフィードや公開プロフィールのRPCはCookieを送らない。プロフィール保存は取得済み投稿の著者情報だけを更新する。保存時に中断した初回取得は、画面が利用中なら再開する。
+
 ## APIと認証の境界
 
 `tablecast-poc/apps/api` のcomposition rootとモジュール公開入口を参考に、`app.ts`、`env.ts`、`db`、`modules/auth`、`modules/social` へ分離した。organization／店舗・Cloudflare固有処理は持ち込まない。公開RPCは `contract.ts` の型だけ。
 
 Better Authが認証し、Honoの `requireSession` と所有者条件が投稿・削除・いいねを認可する。入力はZod、いいねは複合主キーで冪等。公開フィードは著者ID・表示名・画像だけを返し、メールを公開しない。マジックリンクは10分・単回利用・ハッシュ保存、WebAuthnは署名／challenge／originを検証する。共通rate limitはDB保存。
 
+socialモジュールの公開入口で投稿とプロフィールのルーターを合成する。共通のリクエスト本文上限は64 KiBとし、プロフィール更新だけ認証後に画像用の上限を適用する。壊れたJSONや上限超過はHonoの400・413を返し、予期しないエラーの詳細は外部に返さない。いいね追加は投稿の存在確認と冪等な書き込みを一つのSQL文で行い、書き込み中の投稿削除との競合を防ぐ。
+
 プロフィール更新は認証済みの本人だけが行える。端末が写真を選択・縮小し、APIが最大256 KiBのJPEGを検証して512px正方形に再エンコードする。メタデータを落とした画像1枚をPostgreSQLの `avatar` テーブルに保存し、表示名と画像URLを同じトランザクションで更新する。ローカルでも追加のストレージ設定は要らない。フィードとプロフィールには画像URLだけを返す。既存のOAuth・seed画像URLは、利用者が写真を変更または削除するまで使い続ける。保存後はセッションと該当ユーザーのキャッシュを更新し、他の投稿を再取得しない。
+
+アバターの条件付き取得では対象バージョンの存在を確認する。ETagが一致する場合は画像本体をDBから転送せず304を返す。置換・削除済みのバージョンは404となる。
 
 認証CookieはDomain属性を指定せず、発行元のAPIホストに限定する。MetroやEmulateとの親ドメイン共有は不要。ネイティブはBetter Auth ExpoのSecureStoreとCookie送信を使う。PasskeyのRP IDはCookie共有とは別の設定である。
 
 Google／AppleのEmulate issuer・JWKS・token endpointを使うgenericOAuthを開発時だけ登録する。実署名のID tokenを検証し、認証バイパスは設けない。本番でのEmulate起動と公開エミュレータURLを拒否する。メールはResend互換エミュレータへ送る。[設定と検証](auth.md)を参照。
 
-`eslint-plugin-boundaries` がAPI composition root→module、social→authの公開入口、module→DB/platform/shared、モバイルroutes→UI→lib、型のみのAPI契約を強制する。禁止方向・内部ファイルの直接import・未知ファイルはエラー。`scripts/boundaries.test.ts` で許可・禁止例を実際のESLintへ通す。
+`eslint-plugin-boundaries` がAPI composition root→module、social→authの公開入口、module→DB/platform/shared、モバイルroutes→UI→lib、`@starter/api/contract` の `AppType` だけの型importを強制する。禁止方向・内部ファイルの直接import・未知ファイル・実行時コードからテストへの依存はエラー。sharedの外部依存はZodとテスト内の `bun:test` に限定する。`scripts/boundaries.test.ts` で許可・禁止例を実際のESLintへ通す。
 
 ## worktreeと開発プロセス
 
@@ -102,7 +108,7 @@ OpenTofuはAPI有効化、Artifact Registry、Cloud SQL、DB、DBユーザー、
 
 DBパスワードはOpenTofuのephemeral変数とGoogle providerのwrite-only引数を使用する。Secret Managerの**値**は手動投入し、コードやstateへ複製しない。bootstrap用GCS bucketはversioning、public access prevention、削除防止付き。
 
-GitHub Actionsはmainの成功したCIに紐づくSHAだけをデプロイする。コンテナをdigestで指定し、migration Jobを完了させ、トラフィックなしのcandidate revisionで `/ready` を確認してから切り替える。その後に同じSHAのExpo Workflowを呼ぶ。本番配信には別途有効化フラグが必要。
+GitHub Actionsはmainの成功したCIに紐づくSHAだけをデプロイする。APIイメージはGoogle Cloud認証より先にビルドし、生成される認証ファイルはDockerのビルド対象からも除外する。migration Jobを完了させ、トラフィックなしのcandidateタグからURLとリビジョンを取得する。リビジョンのイメージが期待するdigestと一致し、同じタグの `/ready` が成功した場合に、そのリビジョンへ切り替える。その後に同じSHAのExpo Workflowを呼ぶ。本番配信には別途有効化フラグが必要。
 
 WIFはGitHubの不変repository ID、リポジトリ名、main、`deploy.yml`に制限する。CIのサービスアカウントはインフラ管理者ではない。インフラ変更はADCでplanを確認して適用する。
 
