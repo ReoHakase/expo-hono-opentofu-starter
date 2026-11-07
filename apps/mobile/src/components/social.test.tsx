@@ -8,6 +8,7 @@ import { feedOptions } from '@/lib/social';
 
 import { Compose } from './compose';
 import { Feed } from './feed';
+import { ProfileEdit } from './profile-edit';
 
 jest.mock('@expo/ui', () => {
   const reactNative = jest.requireActual<typeof import('react-native')>('react-native');
@@ -55,6 +56,24 @@ jest.mock('expo-router', () => ({
   router: { push: jest.fn(), back: jest.fn() },
   useFocusEffect: () => {},
 }));
+jest.mock('expo-router/react-navigation', () => ({ usePreventRemove: () => {} }));
+jest.mock('expo-router/stack', () => {
+  const { Pressable, Text } = jest.requireActual<typeof import('react-native')>('react-native');
+  return {
+    Stack: {
+      Toolbar: Object.assign(({ children }: { children: React.ReactNode }) => children, {
+        Button: ({ children, ...props }: React.ComponentProps<typeof Pressable>) => (
+          <Pressable {...props} accessibilityRole="button">
+            <Text>{typeof children === 'string' ? children : null}</Text>
+          </Pressable>
+        ),
+      }),
+    },
+  };
+});
+jest.mock('@/lib/profile-photo', () => ({
+  pickProfilePhoto: () => mockPickPhoto(),
+}));
 jest.mock('@/theme/colors', () => ({
   useColors: () => ({ background: '#f2f2f7', card: '#fff', secondary: '#777', separator: '#ccc' }),
 }));
@@ -66,13 +85,22 @@ jest.mock('@/lib/api', () => ({
   apiUrl: 'http://localhost:8080',
   authClient: {
     useSession: () => ({
+      refetch: mockRefreshSession,
       data: mockLoggedIn
-        ? { user: { id: 'viewer', name: 'はなこ', email: 'hanako@example.com' } }
+        ? {
+            user: {
+              id: 'viewer',
+              name: 'はなこ',
+              email: 'hanako@example.com',
+              image: 'avatar-old',
+            },
+          }
         : null,
     }),
   },
   api: {
     api: {
+      me: { profile: { $put: (input: unknown) => mockSaveProfile(input) } },
       posts: {
         $get: () => mockGetPosts(),
         $post: () => mockCreatePost(),
@@ -106,6 +134,14 @@ const mockGetPosts = jest.fn(async () => ({
     nextOffset: null,
   }),
 }));
+const mockRefreshSession = jest.fn(async () => {});
+const mockPickPhoto = jest.fn<Promise<{ uri: string; base64: string } | null>, []>();
+const mockSaveProfile = jest.fn((_input: unknown) =>
+  Promise.resolve({
+    status: 200,
+    json: async () => ({ user: { id: 'viewer', name: '新しい名前', image: '/avatar-new' } }),
+  }),
+);
 const mockLike = jest.fn(async () => ({ ok: true }));
 const mockCreatePost = jest.fn(async () => ({ status: 201 }));
 
@@ -232,4 +268,60 @@ test('opens the author object from a post avatar', async () => {
   await render(<Feed />, { wrapper: wrapper() });
   await fireEvent.press(await screen.findByRole('button', { name: 'たろうのプロフィール' }));
   expect(router.push).toHaveBeenCalledWith({ pathname: '/users/[id]', params: { id: 'author' } });
+});
+
+test('retains the photo and name after a failed profile save and updates the matching cached author on retry', async () => {
+  mockLoggedIn = true;
+  jest.mocked(router.back).mockClear();
+  const client = queryClient();
+  const feed = await (await mockGetPosts()).json();
+  const [first, other] = feed.items;
+  if (!first || !other) {
+    throw new Error('Missing fixture posts');
+  }
+  const key = feedOptions('viewer').queryKey;
+  client.setQueryData(key, {
+    pages: [
+      {
+        ...feed,
+        items: [{ ...first, author: { id: 'viewer', name: 'はなこ', image: 'avatar-old' } }, other],
+      },
+    ],
+    pageParams: [0],
+  });
+
+  await render(<ProfileEdit />, { wrapper: wrapper(client) });
+  const saveButton = screen.getByLabelText('プロフィールを保存');
+  expect(saveButton).toBeDisabled();
+  mockPickPhoto.mockResolvedValueOnce(null);
+  await fireEvent.press(screen.getByRole('button', { name: '写真を選ぶ' }));
+  expect(saveButton).toBeDisabled();
+
+  await fireEvent.changeText(screen.getByLabelText('表示名'), ' ');
+  expect(saveButton).toBeDisabled();
+  await fireEvent.changeText(screen.getByLabelText('表示名'), '新しい名前');
+  mockPickPhoto.mockResolvedValueOnce({ uri: 'file:///profile.jpg', base64: 'aGVsbG8=' });
+  await fireEvent.press(screen.getByRole('button', { name: '写真を選ぶ' }));
+  await waitFor(() => {
+    expect(mockAvatarRenders.at(-1)).toBe('file:///profile.jpg');
+  });
+  mockSaveProfile.mockRejectedValueOnce(new Error('offline'));
+  await fireEvent.press(saveButton);
+  expect(
+    await screen.findByText('通信に失敗しました 接続を確認して保存し直してください'),
+  ).toBeOnTheScreen();
+  expect(router.back).not.toHaveBeenCalled();
+  expect(mockAvatarRenders.at(-1)).toBe('file:///profile.jpg');
+
+  await fireEvent.press(saveButton);
+  await waitFor(() => {
+    expect(router.back).toHaveBeenCalledTimes(1);
+  });
+  expect(mockSaveProfile).toHaveBeenLastCalledWith({
+    json: { name: '新しい名前', avatar: 'aGVsbG8=' },
+  });
+  expect(mockRefreshSession).toHaveBeenCalled();
+  const items = client.getQueryData<FeedData>(key)?.pages[0]?.items;
+  expect(items?.[0]?.author).toEqual({ id: 'viewer', name: '新しい名前', image: '/avatar-new' });
+  expect(items?.[1]).toBe(other);
 });

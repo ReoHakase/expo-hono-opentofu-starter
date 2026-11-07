@@ -1,12 +1,14 @@
 import {
   bigint,
   boolean,
+  bytea,
   index,
   integer,
   pgTable,
   primaryKey,
   text,
   timestamp,
+  uuid,
 } from 'drizzle-orm/pg-core';
 
 export const user = pgTable('user', {
@@ -17,6 +19,14 @@ export const user = pgTable('user', {
   image: text('image'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const avatar = pgTable('avatar', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  version: uuid('version').notNull(),
+  data: bytea('data').notNull(),
 });
 
 export const session = pgTable(

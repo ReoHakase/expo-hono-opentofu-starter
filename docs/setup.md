@@ -440,6 +440,8 @@ bunx eas workflow:run .eas/workflows/native-builds.yml
 
 Development Buildが必要なら、iOS Simulatorは `ios_profile=development-simulator`、Androidは `android_profile=development` を選ぶ。iOS実機用の `ios_profile=development` にはApple署名が必要。リポジトリにはpush・PR・定期実行からEAS Buildを起動する経路を設けない。Expo GitHub連携の自動buildトリガーも追加しない。PRコメントのpreview配信は既存ビルド向けのOTAであり、ネイティブビルドを作らない。
 
+プロフィールの写真編集をDevelopment Buildで使うには、画像選択・加工モジュールが入ったビルドが必要。APIは先に追加migrationを適用する。写真は既存のPostgreSQLに保存するため、別途画像ストレージを準備する必要はない。
+
 本番は従来どおり、APIデプロイ成功後だけ `production-update.yml` を呼び出す。このOTAと手動native build workflowはExpo Workflows側で実行する。ビルドだけなら前述の `eas build --platform all --profile preview` から直接起動でき、workflowを経由する必要はない。
 
 Apple/Googleストアの契約・署名は別途必要で、TestFlight/ストア提出は自動実行しない。初期設定のビルド・端末確認記録は [検証](testing.md) を参照する。

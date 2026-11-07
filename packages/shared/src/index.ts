@@ -20,4 +20,11 @@ export const feedQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).max(10000).default(0),
   author: z.string().min(1).max(128).optional(),
 });
-export const profileInputSchema = z.object({ name: z.string().trim().min(1).max(40) });
+export const profileInputSchema = z.object({
+  name: z.string().trim().min(1, '名前を入力してください').max(40, '40文字以内で入力してください'),
+});
+export const avatarSizeLimit = 256 * 1024;
+export const avatarBase64Limit = Math.ceil(avatarSizeLimit / 3) * 4;
+export const profileUpdateSchema = profileInputSchema.extend({
+  avatar: z.base64().min(1).max(avatarBase64Limit).nullable().optional(),
+});

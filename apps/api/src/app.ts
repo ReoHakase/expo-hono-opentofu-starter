@@ -1,4 +1,5 @@
 import { serveStatic } from '@hono/node-server/serve-static';
+import { avatarBase64Limit } from '@starter/shared';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { cors } from 'hono/cors';
@@ -24,7 +25,11 @@ export function createApp(db: Database, auth: Auth, env: Environment, ready: () 
       '/sample-avatars/*',
       serveStatic({ root: fileURLToPath(new URL('../assets', import.meta.url)) }),
     )
-    .use('/api/*', bodyLimit({ maxSize: 64 * 1024 }))
+    .use('/api/*', (c, next) =>
+      bodyLimit({
+        maxSize: c.req.path === '/api/me/profile' ? avatarBase64Limit + 1024 : 64 * 1024,
+      })(c, next),
+    )
     .use('/api/*', cors({ origin: browserOrigins, credentials: true }))
     .use('/api/*', async (c, next) => {
       c.header('Cache-Control', 'no-store');
