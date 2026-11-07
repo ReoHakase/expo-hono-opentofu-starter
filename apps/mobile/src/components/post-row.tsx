@@ -15,7 +15,7 @@ import { Text } from '@/components/ui/text';
 import { formatPostDate } from '@/lib/date';
 import { usePreferences } from '@/lib/preferences';
 import { changeLike, deletePost, updateFeedPost } from '@/lib/social';
-import { colors } from '@/theme/colors';
+import { useColors } from '@/theme/colors';
 import { avatarSize } from '@/theme/metrics';
 
 export const PostRow = memo(function PostRow({
@@ -27,6 +27,7 @@ export const PostRow = memo(function PostRow({
   viewerId: string | undefined;
   now: number;
 }) {
+  const colors = useColors();
   const date = formatPostDate(item.createdAt, now);
   const client = useQueryClient();
   const { preferences } = usePreferences();

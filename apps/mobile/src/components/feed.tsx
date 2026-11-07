@@ -11,9 +11,10 @@ import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { apiUrl, authClient } from '@/lib/api';
 import { feedOptions } from '@/lib/social';
-import { colors } from '@/theme/colors';
+import { useColors } from '@/theme/colors';
 
 export function Feed({ authorId, header }: { authorId?: string; header?: ReactElement }) {
+  const colors = useColors();
   const [refreshing, setRefreshing] = useState(false);
   const [displayTime, setDisplayTime] = useState(Date.now);
   useFocusEffect(

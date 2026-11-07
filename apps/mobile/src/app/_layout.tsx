@@ -8,9 +8,10 @@ import { useState } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { PreferencesProvider } from '@/lib/preferences';
-import { stackOptions } from '@/theme/navigation';
+import { useStackOptions } from '@/theme/navigation';
 
 function Navigation() {
+  const stackOptions = useStackOptions();
   const scheme = useColorScheme();
   return (
     <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>

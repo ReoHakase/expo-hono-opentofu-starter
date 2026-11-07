@@ -65,6 +65,16 @@ JestはExpo UIのネイティブ境界をmockするため、SwiftUI/Composeの�
 
 iOSのDevelopment BuildとUbuntu・Windows／WSL2では未実行である。iOSのExpo Goでの確認はDevelopment Buildの保証に代えない。Androidも上記の操作を確認した範囲であり、全画面の文字拡大・エラー回復・再起動後の保持やMaestroは未確認。iPhone実機のHub転送、実Google／Apple、実メール配送、OS関連付けを使うPasskeyは対象外。
 
+## 2026-11-07のAndroid外観とアバターの修正検証
+
+- Issue #24の修正で、OSカラーを外観に応じて取得する `useColors` と `useStackOptions` へ移行した。Androidの起動時の色を保持する問題と、React Compilerによるネイティブgetterの固定化を実画面で再現した。除外はカラーHookだけとし、schemeに依存する `useMemo` で通常の再描画時の再計算を避ける。
+- `bun run check` が成功。Jestは6 suites／22 testsで、追加のAppearance変更テストがmemo化した要素・Stackの背景、本文・placeholderの色、入力状態の保持を確認する。既存のいいね行だけの更新、全件再取得なし、外観設定の保存・復元・失敗後の再試行も成功した。Jestではネイティブカラーの取得境界をmockするため、Compilerを含む実描画は次の端末操作で確認した。
+- Expo Doctor 20/20とiOS／Androidのbundle生成が成功した。JS変更のみで、ネイティブ再ビルド・DB変更・EAS Build・OTA公開は行っていない。
+- macOS／Pixel 8 API 36 arm64のDevelopment BuildをHub 0.21.0で操作し、実APIとseedデータでOSのライト↔ダーク、設定のsystem／light／dark、OSと異なる固定外観を確認した。アプリの再起動後も保存済みライト設定が復元された。タイムライン・プロフィール・設定・投稿シートの背景と文字・アイコンを確認した。
+- 投稿シートに `Theme draft` を入力してOS外観を変更し、本文と11文字のカウントを保持したまま、本文・背景・送信アイコンがダークへ切り替わることを確認した。テスト下書きは送信せず閉じた。いいね3→4→3で投稿位置が変わらないことも確認した。
+- Androidの未設定アバターが上寄りになる問題は、上下のExpo UI Spacerへ `flexible` を指定して修正した。タイムラインの40dp、プロフィールの80dpで中央配置を確認し、画像付きseedアバターも維持した。
+- iPhone 17 Pro／iOS 26.5のExpo Goで、ライト↔ダークの背景切替とプロフィールの人物アイコンの中央配置を確認した。iOS Development Build、実機、最大文字サイズ、Maestroは今回未確認である。
+
 ## 2026-11-07の共有用ビルド設定の検証
 
 - `bun run check` が成功。`eas config --profile preview --platform ios` / `android` で、両OSの `developmentClient: false`、iOSの `simulator: true`、Androidの `buildType: apk` を確認した。

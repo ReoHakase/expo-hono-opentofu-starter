@@ -4,7 +4,7 @@ import { Image } from 'react-native';
 
 import { NativeHost } from '@/components/native-host';
 import { apiUrl } from '@/lib/api';
-import { colors } from '@/theme/colors';
+import { useColors } from '@/theme/colors';
 import { avatarSize } from '@/theme/metrics';
 
 export function Avatar({
@@ -14,6 +14,7 @@ export function Avatar({
   size?: number;
   image?: string | null | undefined;
 }) {
+  const colors = useColors();
   const [failedUri, setFailedUri] = useState<string>();
   const uri = image?.startsWith('/') && apiUrl ? `${apiUrl}${image}` : image;
   if (uri && uri !== failedUri) {
@@ -39,7 +40,7 @@ export function Avatar({
       }}
     >
       <Column alignment="center" style={{ width: '100%', height: '100%' }}>
-        <Spacer />
+        <Spacer flexible />
         <Icon
           name={Icon.select({
             ios: 'person.fill',
@@ -48,7 +49,7 @@ export function Avatar({
           size={size * 0.5}
           color={colors.secondary}
         />
-        <Spacer />
+        <Spacer flexible />
       </Column>
     </NativeHost>
   );

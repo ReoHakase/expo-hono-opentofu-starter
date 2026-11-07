@@ -2,11 +2,12 @@ import type { ReactNode } from 'react';
 
 import { ScrollView } from 'react-native';
 
-import { colors } from '@/theme/colors';
+import { useColors } from '@/theme/colors';
 
 // UIScrollView/Android ScrollView owns keyboard avoidance and native header insets.
 // Empty, loading and error screens need the same inset behavior as content screens.
 export function Screen({ children }: { children: ReactNode }) {
+  const colors = useColors();
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}

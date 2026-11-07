@@ -56,7 +56,7 @@ jest.mock('expo-router', () => ({
   useFocusEffect: () => {},
 }));
 jest.mock('@/theme/colors', () => ({
-  colors: { background: '#f2f2f7', card: '#fff', secondary: '#777', separator: '#ccc' },
+  useColors: () => ({ background: '#f2f2f7', card: '#fff', secondary: '#777', separator: '#ccc' }),
 }));
 jest.mock('expo-haptics', () => ({ selectionAsync: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('@/lib/preferences', () => ({

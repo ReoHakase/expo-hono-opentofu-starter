@@ -1,7 +1,8 @@
 import { Stack } from 'expo-router/stack';
 
-import { stackOptions } from '@/theme/navigation';
+import { useStackOptions } from '@/theme/navigation';
 export default function Layout() {
+  const stackOptions = useStackOptions();
   return (
     <Stack screenOptions={stackOptions}>
       <Stack.Screen

@@ -16,9 +16,10 @@ import { Screen } from '@/components/screen';
 import { Text } from '@/components/ui/text';
 import { api, apiUrl, authClient } from '@/lib/api';
 import { passkeysAvailable, signInWithPasskey } from '@/lib/passkeys';
-import { colors } from '@/theme/colors';
+import { useColors } from '@/theme/colors';
 
 export function Account() {
+  const colors = useColors();
   const session = authClient.useSession();
   const client = useQueryClient();
   const [email, setEmail] = useState('');
