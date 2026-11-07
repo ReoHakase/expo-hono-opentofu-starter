@@ -1,5 +1,15 @@
 # 検証
 
+## 2026-11-07のseed集約とログインアカウント画像の検証
+
+- Issue #31でseedの実行入口と6枚の画像・出典を `apps/api/src/db/seed/` へ集約した。`/sample-avatars/*` の公開URLは維持し、source実行とbundle済みNodeコンテナで同じassetを参照する。
+- `bun run check`、API build、認証統合テスト3件／58 assertionsが成功した。APIのBunテスト10件は既存・追加画像のJPEG応答と欠損画像の404も確認する。実際の本番用イメージを起動し、HTTPで既存画像とはなこ／たろうの画像を取得できた。
+- 新しい開発DBで先にGoogle／Apple OAuthからはなこのユーザーを作り、投稿を1件作成してからseedを実行した。既存OAuthユーザーのIDを保持して画像を補い、4投稿者＋2ログインアカウント、8件のseed投稿＋利用者投稿1件、20件のseedいいねを確認した。
+- 利用者のいいねを1件追加し、たろうの名前と画像を変更してseedを再実行した。件数・利用者投稿・いいね・既存IDが維持され、変更済みの名前・画像も上書きされなかった。画像を未設定に戻して再実行するとseed画像だけが補われた。productionと非Emulate環境ではDB変更前に実行を拒否した。
+- macOS上のPixel 8 API 36 arm64／Development Buildで、新しいworktreeのHTTPS MetroとAPIに接続した。Google Emulateのはなこでログインし、タイムラインとマイページの画像、および保持された投稿を実画面で確認した。ログアウト後はApple Emulateのたろうでログインし、画像と投稿の空状態を確認した。ライト／ダークの画像表示も確認し、OSは元のライトへ戻した。
+
+iOS・実機・Ubuntu／Windowsでは今回の変更後のネイティブ操作を実施していない。ネイティブ依存・UIコンポーネント・DBスキーマは変更せず、ネイティブ再ビルド、EAS Build・OTA・本番配信は起動していない。
+
 ## 2026-11-07のworktree標準命名の検証
 
 - Issue #29で独自ハッシュとComposeの明示nameを削除し、`expo-hono-opentofu-starter-29-portless-defaults` と一時的な `expo-hono-opentofu-starter-29-parallel-check` の2 worktreeを起動した。既存の旧ハッシュ名projectとHTTPS proxyは維持した。

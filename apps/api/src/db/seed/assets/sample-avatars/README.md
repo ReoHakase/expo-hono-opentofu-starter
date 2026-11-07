@@ -7,4 +7,11 @@ Local sample portraits from [Random User Generator](https://randomuser.me/copyri
 - `yui.jpg`: https://randomuser.me/api/portraits/women/68.jpg
 - `ren.jpg`: https://randomuser.me/api/portraits/men/75.jpg
 
-Retrieved 2026-11-06. Sample users cannot authenticate; Emulate supplies separate login accounts.
+Retrieved 2026-11-06.
+
+OAuth Emulate login accounts also use local portraits:
+
+- `hanako.jpg`: https://randomuser.me/api/portraits/women/11.jpg
+- `taro.jpg`: https://randomuser.me/api/portraits/men/12.jpg
+
+Retrieved 2026-11-07. The four timeline authors cannot authenticate. The separate Emulate accounts `hanako@example.com` and `taro@example.com` receive these portraits from the development DB seed; an existing account's non-empty image and other profile data are preserved.

@@ -20,6 +20,17 @@ afterAll(async () => {
 });
 
 describe('HTTP contract', () => {
+  test('serves bundled seed avatars and returns 404 for missing images', async () => {
+    for (const name of ['haru', 'hanako', 'taro']) {
+      const response = await app.request(`/sample-avatars/${name}.jpg`);
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toBe('image/jpeg');
+      expect(new Uint8Array(await response.arrayBuffer()).slice(0, 2)).toEqual(
+        new Uint8Array([0xff, 0xd8]),
+      );
+    }
+    expect((await app.request('/sample-avatars/missing.jpg')).status).toBe(404);
+  });
   test('liveness is independent and readiness redacts errors', async () => {
     expect((await app.request('/health')).status).toBe(200);
     const unavailable = createApp(db, auth, env, () =>
