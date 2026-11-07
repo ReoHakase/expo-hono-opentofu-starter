@@ -56,9 +56,14 @@ JestはExpo UIのネイティブ境界をmockするため、SwiftUI/Composeの�
 - 起動済みPostgreSQLで認証統合テスト3 tests／58 assertionsが成功。`test:integration` に `--no-deps` を付け、通常Compose設定でEmulateを再作成して端末用URLやポートを戻してしまう副作用を防いだ。
 - EASの `development-simulator` で `developmentClient: true` と `simulator: true` を確認。手動のnative-builds workflowのサーバー検証が成功した。EAS BuildやOTA公開は起動していない。
 - macOSのiPhone 17 Pro Simulator／iOS 26.5／Expo Go 58.0.7で、Hub 0.21.0の画面転送・タップ・キーボード入力・スクロールを確認。Portless CAをSimulatorへ登録し、HTTPSで実APIとseed画像・タイムラインを表示した。いいねの2→1→2、投稿入力と送信、入力状態を保つFast Refreshを確認した。一時的な文言変更は復元済み。Google／Apple Emulateのアカウント選択からアプリへ復帰し、同じユーザーのセッションが再作成されることも確認した。メールリンクはアプリから送信し、Emulate APIで取得したリンクを同じSimulatorで開いて、送信先のテストアカウントでログインできることを確認した。
+- Android Studio Rabbit 2 2026.2.2を導入したmacOSで、SDK Command-line Tools 23.0とGoogle APIs API 36 arm64を用意し、専用AVD `Starter_Pixel_8_API_36` を作成した。既存のGoogle Play AVDは保持した。Studio・SDK CLI・Hubの `ANDROID_USER_HOME`／`ANDROID_AVD_HOME` を揃え、Hub 0.21.0で画面転送・タップ・キーボード入力・スクロールを確認した。
+- commit `758aa5e` からAndroidをprebuildし、Android Studio付属JDKとGradleの `:app:assembleDebug -PreactNativeArchitectures=arm64-v8a` でDevelopment Buildを作成した。初回ビルドは7分19秒で成功し、APKを上記AVDへインストールした。生成されたnative projectとAPKはGit管理外のまま保持した。EAS Buildは使用していない。
+- Androidの専用AVDを `-writable-system -no-snapshot` で起動し、生成したhostsの統合、serial指定の `adb reverse tcp:443 tcp:443`、Settingsからの公開CA登録を実施した。証明書検証を有効にしたままHTTPS Metro／APIへ接続し、実DBのseed画像・タイムラインを表示した。
+- AndroidのDevelopment Buildで、Google／Apple Emulateのアカウント選択からアプリへ復帰し、設定に `hanako@example.com` のセッションが表示されることを確認した。Chromeの初回同意は利用者の承認後に行い、利用状況の送信をオフにしてアカウントを追加せず続行した。メールリンクはアプリから送信し、Emulate APIで取得したリンクを同じAVDで開いて `android@example.com` でログインできた。いいねの3→4→3で投稿の位置を保ち、`Android HTTPS test` の投稿・表示、メール欄の入力を保持したFast Refreshを確認した。一時的な文言変更は復元済み。
+- AndroidでOS外観をダークへ切り替えると、文字が白くなる一方で投稿背景が明るいまま残る不具合を確認した。[Issue #24](https://github.com/ReoHakase/expo-hono-opentofu-starter/issues/24) に再現条件と画像を記録した。この接続環境の変更では修正せず、検証後はライトへ戻した。
 - 当初のHTTP構成ではBetter AuthのExpo認可proxyが `Invalid authorizationURL` を返した。利用者の選択によりHTTPSの.localhostへ統一し、認証や証明書の検証を無効化する回避策は追加していない。
 
-このMacには現在のアプリのDevelopment Buildと利用可能なAndroid system imageがないため、Development Build自体の起動、AndroidのCA・hosts・ADB転送とネイティブ操作は未確認。Ubuntu・Windows／WSL2でも未実行である。Expo Goでの確認はDevelopment Buildの保証に代えない。iPhone実機のHub転送、実Google／Apple、実メール配送、OS関連付けを使うPasskeyは対象外。
+iOSのDevelopment BuildとUbuntu・Windows／WSL2では未実行である。iOSのExpo Goでの確認はDevelopment Buildの保証に代えない。Androidも上記の操作を確認した範囲であり、全画面の文字拡大・エラー回復・再起動後の保持やMaestroは未確認。iPhone実機のHub転送、実Google／Apple、実メール配送、OS関連付けを使うPasskeyは対象外。
 
 ## 2026-11-07の共有用ビルド設定の検証
 

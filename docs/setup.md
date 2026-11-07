@@ -25,10 +25,16 @@ Metro・API・DB・EmulateはCompose内、Expo Device Hubと仮想端末はホ�
 
 ```sh
 export ANDROID_HOME="$HOME/Library/Android/sdk"
-export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+export ANDROID_USER_HOME="$HOME/.android"
+export ANDROID_AVD_HOME="$ANDROID_USER_HOME/avd"
+export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
 adb version
 emulator -list-avds
+avdmanager list avd
 ```
+
+Hubも同じ環境変数を設定したターミナルから起動する。XDG環境ではCLIが `$XDG_CONFIG_HOME/.android`、Android Studioが `$HOME/.android` を使う場合があるため、Device ManagerのAVD保存先と `ANDROID_AVD_HOME` を揃える。既存のAVDを移動・初期化する必要はない。Command-line Toolsを追加した後はHubを再起動する。
 
 ### Ubuntu
 
@@ -158,6 +164,8 @@ bunx eas build --platform android --profile development
 
 iOSのdevelopment-simulatorはApple Developer Program不要。成果物を展開した `.app` を起動中のSimulatorへドラッグするか、`xcrun simctl install booted /absolute/path/App.app` でインストールする。Androidは `adb devices -l` で対象を選び、`adb -s SERIAL install /absolute/path/app.apk` を実行する。`SERIAL` は実際の端末IDへ置き換える。共有用previewはMetroへ接続する開発クライアントではないため、この用途には使用しない。
 
+Android StudioのSDKとJDKがあるホストでは、[Expo CLIでローカルビルド](https://docs.expo.dev/guides/local-app-development/)もできる。`apps/mobile` で `bunx expo run:android --no-bundler --device SERIAL` を実行する。MetroはCompose内のものを使い、インストール後は後述のHTTPS URLを開く。初回はGradle・NDK・Build-Toolsなどを取得する。SDKライセンスが未承諾ならAndroid Studioで確認・承諾する。生成された `android/` とAPKはGitへ追加しない。
+
 worktreeルートへ戻り、ホストで次を実行する。
 
 ```sh
@@ -256,6 +264,8 @@ HubはCtrl+C、Composeは `bun run services:down` で自worktreeだけを停止�
 | 状態                       | 確認すること                                                                                                                                                          |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Hubに端末が出ない          | ホストの `xcrun simctl list devices available` または `adb devices -l`／`emulator -list-avds` が成功するか。SDK LocationとHubの起動OSを確認する                       |
+| StudioとHubでAVD一覧が違う | `avdmanager list avd` のPathとDevice Managerの保存先を比べ、同じ `ANDROID_USER_HOME`／`ANDROID_AVD_HOME` を使う。SDK Command-line ToolsとJDKも確認する                |
+| Emulatorの描画が失敗する   | 専用AVDを停止し、`-no-window -gpu swiftshader` を付けて起動してHubで表示する。再起動時も `-writable-system -no-snapshot` を維持し、hostsとADB転送を再確認する         |
 | ADBがunauthorized／offline | 端末のデバッグ承認と再接続を確認する。複数端末では必ず `-s SERIAL` を付ける                                                                                           |
 | 名前を解決できない         | iOSは `portless hosts sync`、Androidは端末の `/system/etc/hosts` を確認する。ホストのhostsだけではAndroidに反映されない                                               |
 | 証明書エラー               | 接続中のPortlessとCAが同じか、対象Simulator／AVDに登録したか確認する。Androidは変更後のdebug buildを使う。検証を無効化しない                                          |
