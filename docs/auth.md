@@ -10,7 +10,7 @@ bun run dev
 bun run db:seed
 ```
 
-seedは画像付き4ユーザー、8投稿、20件のいいねを固定IDで作る。`NODE_ENV=development` かつ `AUTH_EMULATE=true` に限定し、再実行しても重複せず、アプリから作ったユーザー・投稿・いいねは削除しない。サンプル画像はAPIに同梱し、外部の画像サーバーへ実行時に接続しない。写真の出典は `apps/api/assets/sample-avatars/README.md`。サンプル著者とログインアカウントは別である。
+seedは画像付き4投稿者、8投稿、20件のいいねを固定IDで作り、OAuth Emulateの「はなこ」「たろう」にも画像を付ける。`NODE_ENV=development` かつ `AUTH_EMULATE=true` に限定し、再実行しても重複せず、アプリから作ったユーザー・投稿・いいねは削除しない。サンプル画像はAPIに同梱し、外部の画像サーバーへ実行時に接続しない。写真の出典は `apps/api/src/db/seed/assets/sample-avatars/README.md`。サンプル著者とログインアカウントは別である。ログインアカウントはemailで照合し、既存ID・名前・設定済み画像は保持して未設定画像だけ補う。
 
 | サービス       | PortlessのURL                                                         |
 | -------------- | --------------------------------------------------------------------- |

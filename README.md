@@ -55,21 +55,21 @@ Dev Containers対応エディタでは **Reopen in Container** で編集・検�
 
 ホストにBun 1.4.4を入れて `bun install --frozen-lockfile && bun run setup` すると、以下の短縮コマンドを使える。`dev*`、`services:*`、`db:migrate`、`test:integration` はホストからComposeを操作する。それ以外の検査はDev Container内でも実行できる。
 
-| コマンド                                        | 内容                                               |
-| ----------------------------------------------- | -------------------------------------------------- |
-| `bun run setup`                                 | worktree設定と未作成のアプリenvを生成              |
-| `bun run dev`                                   | ホストからComposeのDB・API・Metroを起動            |
-| `bun run dev:devices`                           | 仮想端末向けにHTTPS接続を設定してCompose起動       |
-| `bun run devices`                               | ホストのExpo Device Hubを起動                      |
-| `bun run dev:go`                                | Expo Go用のMetroトンネル付きで起動                 |
-| `bun run check`                                 | 整形、型付きlint、型検査、Bun/Jestテスト、Fallow   |
-| `bun run test:integration`                      | PostgreSQLを使った認証・認可テスト                 |
-| `bun run db:generate` / `bun run db:migrate`    | migration生成 / 適用                               |
-| `bun run db:seed`                               | ローカルの4ユーザー・アバター・8投稿・いいねを用意 |
-| `bun run doctor`                                | Expoの互換性確認                                   |
-| `bun run export:mobile`                         | iOS・Androidのbundle生成                           |
-| `bun run build:api`                             | Node.js向けAPI build                               |
-| `bun run services:up` / `bun run services:down` | DB・API・Metroをバックグラウンド起動 / 停止        |
+| コマンド                                        | 内容                                                    |
+| ----------------------------------------------- | ------------------------------------------------------- |
+| `bun run setup`                                 | worktree設定と未作成のアプリenvを生成                   |
+| `bun run dev`                                   | ホストからComposeのDB・API・Metroを起動                 |
+| `bun run dev:devices`                           | 仮想端末向けにHTTPS接続を設定してCompose起動            |
+| `bun run devices`                               | ホストのExpo Device Hubを起動                           |
+| `bun run dev:go`                                | Expo Go用のMetroトンネル付きで起動                      |
+| `bun run check`                                 | 整形、型付きlint、型検査、Bun/Jestテスト、Fallow        |
+| `bun run test:integration`                      | PostgreSQLを使った認証・認可テスト                      |
+| `bun run db:generate` / `bun run db:migrate`    | migration生成 / 適用                                    |
+| `bun run db:seed`                               | 4投稿者・2ログインアカウントの画像と8投稿・いいねを用意 |
+| `bun run doctor`                                | Expoの互換性確認                                        |
+| `bun run export:mobile`                         | iOS・Androidのbundle生成                                |
+| `bun run build:api`                             | Node.js向けAPI build                                    |
+| `bun run services:up` / `bun run services:down` | DB・API・Metroをバックグラウンド起動 / 停止             |
 
 ## 文書
 

@@ -1,6 +1,8 @@
-import { connectDatabase } from './db/client';
-import { like, post, user } from './db/schema';
-import { readEnv } from './env';
+import { isNull } from 'drizzle-orm';
+
+import { readEnv } from '../../env';
+import { connectDatabase } from '../client';
+import { like, post, user } from '../schema';
 
 const env = readEnv();
 if (env.NODE_ENV !== 'development' || !env.AUTH_EMULATE) {
@@ -12,6 +14,20 @@ const people = [
   { id: 'sample-sora', name: 'そら', image: '/sample-avatars/sora.jpg' },
   { id: 'sample-yui', name: 'ゆい', image: '/sample-avatars/yui.jpg' },
   { id: 'sample-ren', name: 'れん', image: '/sample-avatars/ren.jpg' },
+];
+const loginPeople = [
+  {
+    id: 'sample-hanako',
+    email: 'hanako@example.com',
+    name: 'はなこ',
+    image: '/sample-avatars/hanako.jpg',
+  },
+  {
+    id: 'sample-taro',
+    email: 'taro@example.com',
+    name: 'たろう',
+    image: '/sample-avatars/taro.jpg',
+  },
 ];
 const posts = [
   {
@@ -57,6 +73,17 @@ const posts = [
 ];
 try {
   await db.transaction(async (tx) => {
+    for (const person of loginPeople) {
+      // Match existing OAuth users by email and fill only a missing avatar.
+      await tx
+        .insert(user)
+        .values({ ...person, emailVerified: true })
+        .onConflictDoUpdate({
+          target: user.email,
+          set: { image: person.image },
+          setWhere: isNull(user.image),
+        });
+    }
     for (const person of people) {
       await tx
         .insert(user)
@@ -74,7 +101,7 @@ try {
       }
     }
   });
-  console.log('Local sample data ready: 4 users with avatars and 8 posts');
+  console.log('Local sample data ready: 4 authors, 2 login accounts with avatars and 8 posts');
 } finally {
   await pool.end();
 }

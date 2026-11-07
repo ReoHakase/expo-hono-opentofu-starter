@@ -156,7 +156,7 @@ bun run dev:mobile   # Metroのみ。DB不要
 bun run dev:go       # API・DBとExpo Go用トンネル付きMetro
 bun run services:up  # API・DB・Metroをバックグラウンド起動
 bun run db:migrate
-bun run db:seed      # 4ユーザーの画像・8投稿・いいね。既存の利用者データは保持
+bun run db:seed      # 4投稿者・2ログインアカウントの画像・8投稿・いいね。既存データは保持
 bun run test:integration
 bun run services:down
 ```

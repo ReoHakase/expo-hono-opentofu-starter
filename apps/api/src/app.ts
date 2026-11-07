@@ -22,7 +22,7 @@ export function createApp(db: Database, auth: Auth, env: Environment, ready: () 
     .use('*', secureHeaders())
     .get(
       '/sample-avatars/*',
-      serveStatic({ root: fileURLToPath(new URL('../assets', import.meta.url)) }),
+      serveStatic({ root: fileURLToPath(new URL('../src/db/seed/assets', import.meta.url)) }),
     )
     .use('/api/*', bodyLimit({ maxSize: 64 * 1024 }))
     .use('/api/*', cors({ origin: browserOrigins, credentials: true }))
