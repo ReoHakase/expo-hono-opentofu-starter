@@ -110,16 +110,18 @@ function Editor({
 
   const image = photo === undefined ? user.image : photo?.uri;
   const busy = save.isPending || choosing;
+  const canSave = !busy && dirty && validation.success;
   return (
     <>
       <Cancel disabled={busy} />
       <Stack.Toolbar placement="right">
         <Stack.Toolbar.Button
           accessibilityLabel="プロフィールを保存"
-          disabled={busy || !dirty || !validation.success}
+          disabled={!canSave}
           variant="done"
           {...(Platform.OS === 'android'
             ? {
+                ...(!canSave ? { tintColor: colors.secondary } : {}),
                 icon: Icon.select({
                   ios: 'checkmark',
                   android: import('@expo/material-symbols/check.xml'),
