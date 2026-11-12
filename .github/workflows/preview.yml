@@ -100,7 +100,7 @@ jobs:
             if (pr.state !== 'open' || pr.head.sha !== process.env.PREVIEW_SHA) throw new Error('PRが更新・終了されたため配信を中止します');
       - name: Publish iOS and Android updates
         id: preview
-        uses: expo/expo-github-action/preview@9.0.1
+        uses: expo/expo-github-action/preview@9.0.2
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         with:
