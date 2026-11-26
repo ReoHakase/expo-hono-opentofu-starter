@@ -1,4 +1,4 @@
-FROM oven/bun:1.4.4 AS build
+FROM oven/bun:1.4.5 AS build
 WORKDIR /app
 COPY package.json bun.lock bunfig.toml ./
 COPY apps/api/package.json apps/api/package.json
@@ -11,7 +11,7 @@ COPY packages/shared packages/shared
 COPY tsconfig.json tsconfig.json
 RUN bun run --cwd apps/api build
 
-FROM oven/bun:1.4.4 AS dependencies
+FROM oven/bun:1.4.5 AS dependencies
 WORKDIR /app
 COPY package.json bun.lock bunfig.toml ./
 COPY apps/api/package.json apps/api/package.json
